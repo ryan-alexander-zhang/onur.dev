@@ -1,16 +1,22 @@
 import { getAllPageSlugs, getAllPosts } from '@/lib/contentful'
 import { getBookmarks } from '@/lib/raindrop'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getSortedPosts } from '@/lib/utils'
 
 export default async function sitemap() {
-  const [allPosts, bookmarks, allPages] = await Promise.all([getAllPosts(), getBookmarks(), getAllPageSlugs()])
+  const [{ siteBaseUrl, siteUrl }, allPosts, bookmarks, allPages] = await Promise.all([
+    getSiteMetadata(),
+    getAllPosts(),
+    getBookmarks(),
+    getAllPageSlugs()
+  ])
 
   const sortedWritings = getSortedPosts(allPosts)
   const latestPostDate = sortedWritings[0]?.sys?.publishedAt
 
   const writings = sortedWritings.map((post) => {
     return {
-      url: `https://onur.dev/writing/${post.slug}`,
+      url: buildAbsoluteUrl(siteBaseUrl, `writing/${post.slug}`),
       lastModified: post.sys.publishedAt,
       changeFrequency: 'yearly',
       priority: 0.5
@@ -19,7 +25,7 @@ export default async function sitemap() {
 
   const mappedBookmarks = bookmarks.map((bookmark) => {
     return {
-      url: `https://onur.dev/bookmarks/${bookmark.slug}`,
+      url: buildAbsoluteUrl(siteBaseUrl, `bookmarks/${bookmark.slug}`),
       changeFrequency: 'weekly',
       priority: 1
     }
@@ -35,7 +41,7 @@ export default async function sitemap() {
     if (['bookmarks'].includes(page.slug)) priority = 1
 
     return {
-      url: `https://onur.dev/${page.slug}`,
+      url: buildAbsoluteUrl(siteBaseUrl, page.slug),
       lastModified: page.sys.publishedAt,
       changeFrequency,
       priority
@@ -44,7 +50,7 @@ export default async function sitemap() {
 
   return [
     {
-      url: 'https://onur.dev',
+      url: siteUrl,
       lastModified: latestPostDate,
       changeFrequency: 'weekly',
       priority: 1

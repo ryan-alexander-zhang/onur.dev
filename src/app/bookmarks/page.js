@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import NextLink from 'next/link'
 import { Suspense } from 'react'
@@ -9,6 +7,7 @@ import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { getPageSeo } from '@/lib/contentful'
 import { getBookmarks } from '@/lib/raindrop'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
 async function fetchData() {
@@ -21,6 +20,8 @@ async function fetchData() {
 }
 
 export default async function Writing() {
+  'use cache'
+
   cacheLife('max')
   const { bookmarks } = await fetchData()
 
@@ -46,14 +47,13 @@ export default async function Writing() {
 }
 
 export async function generateMetadata() {
-  cacheLife('max')
-  const seoData = await getPageSeo('bookmarks')
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getPageSeo('bookmarks')])
   if (!seoData) return null
 
   const {
     seo: { title, description }
   } = seoData
-  const siteUrl = '/bookmarks'
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, 'bookmarks')
 
   return {
     title,

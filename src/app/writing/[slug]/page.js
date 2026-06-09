@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
@@ -11,6 +9,7 @@ import { PageTitle } from '@/components/page-title'
 import { ScrollArea } from '@/components/scroll-area'
 import { WritingViews } from '@/components/writing-views'
 import { getAllPostSlugs, getPost, getWritingSeo } from '@/lib/contentful'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getDateTimeFormat, isDevelopment } from '@/lib/utils'
 
 export async function generateStaticParams() {
@@ -32,10 +31,12 @@ async function fetchData(slug) {
 }
 
 export default async function WritingSlug(props) {
+  'use cache'
+
   cacheLife('max')
   const params = await props.params
   const { slug } = params
-  const { data } = await fetchData(slug)
+  const [{ data }, { author, siteBaseUrl }] = await Promise.all([fetchData(slug), getSiteMetadata()])
 
   const {
     title,
@@ -59,9 +60,9 @@ export default async function WritingSlug(props) {
     dateModified,
     author: {
       '@type': 'Person',
-      name: 'Onur Şuyalçınkaya'
+      name: author.name
     },
-    url: `https://onur.dev/writing/${slug}`
+    url: buildAbsoluteUrl(siteBaseUrl, `writing/${slug}`)
   }
 
   return (
@@ -93,10 +94,9 @@ export default async function WritingSlug(props) {
 }
 
 export async function generateMetadata(props) {
-  cacheLife('max')
   const params = await props.params
   const { slug } = params
-  const seoData = await getWritingSeo(slug)
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getWritingSeo(slug)])
   if (!seoData) return null
 
   const {
@@ -105,7 +105,7 @@ export async function generateMetadata(props) {
     sys: { firstPublishedAt, publishedAt: updatedAt }
   } = seoData
 
-  const siteUrl = `/writing/${slug}`
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, `writing/${slug}`)
   const postDate = date || firstPublishedAt
   const publishedTime = new Date(postDate).toISOString()
   const modifiedTime = new Date(updatedAt).toISOString()
@@ -123,7 +123,7 @@ export async function generateMetadata(props) {
         modifiedTime
       }),
       url: siteUrl,
-      images: siteUrl + '/og.png'
+      images: `${siteUrl}/og.png`
     },
     alternates: {
       canonical: siteUrl

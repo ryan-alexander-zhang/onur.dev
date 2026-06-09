@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
@@ -12,6 +10,7 @@ import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { getAllPageSlugs, getPage, getPageSeo } from '@/lib/contentful'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { isDevelopment } from '@/lib/utils'
 
 export async function generateStaticParams() {
@@ -35,6 +34,8 @@ async function fetchData(slug) {
 }
 
 export default async function PageSlug(props) {
+  'use cache'
+
   cacheLife('max')
   const params = await props.params
   const { slug } = params
@@ -59,16 +60,15 @@ export default async function PageSlug(props) {
 }
 
 export async function generateMetadata(props) {
-  cacheLife('max')
   const params = await props.params
   const { slug } = params
-  const seoData = await getPageSeo(slug)
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getPageSeo(slug)])
   if (!seoData) return null
 
   const {
     seo: { title, description, keywords }
   } = seoData
-  const siteUrl = `/${slug}`
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, slug)
 
   return {
     title,
@@ -78,7 +78,7 @@ export async function generateMetadata(props) {
       title,
       description,
       url: siteUrl,
-      images: siteUrl + '/og.png'
+      images: `${siteUrl}/og.png`
     },
     alternates: {
       canonical: siteUrl

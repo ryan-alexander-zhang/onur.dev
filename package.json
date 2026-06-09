@@ -1,9 +1,9 @@
 {
-  "name": "onur.dev",
-  "description": "My personal website.",
+  "name": "ryan-alexander-zhang-site",
+  "description": "Ryan Alexander Zhang's personal website.",
   "author": {
-    "name": "Onur Şuyalçınkaya",
-    "url": "https://onur.dev"
+    "name": "Ryan Alexander Zhang",
+    "url": "https://eng-copilot-roan.vercel.app/"
   },
   "scripts": {
     "dev": "next dev",

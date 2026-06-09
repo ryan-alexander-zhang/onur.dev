@@ -1,13 +1,13 @@
 import { ImageResponse } from 'next/og'
 
-import { sharedMetadata } from '@/app/shared-metadata'
 import { OpenGraphImage } from '@/components/og-image'
 import { getBoldFont, getRegularFont } from '@/lib/fonts'
 import { getBookmarks } from '@/lib/raindrop'
+import { getSiteMetadata, OG_IMAGE } from '@/lib/site'
 
 export const size = {
-  width: sharedMetadata.ogImage.width,
-  height: sharedMetadata.ogImage.height
+  width: OG_IMAGE.width,
+  height: OG_IMAGE.height
 }
 
 export async function generateStaticParams() {
@@ -18,7 +18,8 @@ export async function generateStaticParams() {
 export async function GET(_, props) {
   const params = await props.params
   const { slug } = params
-  const [bookmarks, regularFontData, boldFontData] = await Promise.all([
+  const [{ author, siteLabel }, bookmarks, regularFontData, boldFontData] = await Promise.all([
+    getSiteMetadata(),
     getBookmarks(),
     getRegularFont(),
     getBoldFont()
@@ -30,7 +31,7 @@ export async function GET(_, props) {
     (
       <OpenGraphImage
         title={currentBookmark.title}
-        description={`A curated selection of various handpicked ${currentBookmark.title.toLowerCase()} bookmarks by Onur Şuyalçınkaya`}
+        description={`A curated selection of various handpicked ${currentBookmark.title.toLowerCase()} bookmarks by ${author.name}`}
         icon={
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -46,6 +47,7 @@ export async function GET(_, props) {
             <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
           </svg>
         }
+        siteLabel={siteLabel}
         url="bookmarks"
       />
     ),

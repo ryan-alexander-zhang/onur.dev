@@ -1,14 +1,13 @@
-# onur.dev
+# Ryan Alexander Zhang
 
-<img src="onurdev.png" alt="onur.dev — Onur Şuyalçınkaya" style="border-radius: 12px; border: 1px solid #e5e7eb" />
+<img src="site-preview.png" alt="Ryan Alexander Zhang personal website" style="border-radius: 12px; border: 1px solid #e5e7eb" />
 
 <br>
 <br>
 
-My personal website has evolved over the years — from a simple static HTML page, to `Create React App`, to `GatsbyJS`,
-then to a combination of `Next.js`, `Chakra UI` and `MDX`, and finally to a combination of `Next.js`, `Tailwind CSS` and
-`Contentful`. It serves as an app-like-web platform for my writings, highlighting my journey, showcasing my bookmarks,
-and more.
+This repository contains my personal website. It is built with `Next.js`, `Tailwind CSS`, `Contentful`, and a few small
+integrations for bookmarks, analytics, and profile data. The home page intro and sidebar profile now read directly from
+my GitHub profile and profile `README`, so updating GitHub is enough to refresh that content.
 
 ## Overview
 
@@ -26,13 +25,13 @@ and more.
 ## Running Locally
 
 ```bash
-$ git clone https://github.com/suyalcinkaya/onur.dev.git
-$ cd onur.dev
+$ git clone <your-repository-url>
+$ cd <repo-directory>
 $ bun i
 $ bun dev
 ```
 
-Create a `.env` file similar to [`.env.example`](https://github.com/suyalcinkaya/onur.dev/blob/master/.env.example).
+Create a `.env` file based on [`.env.example`](./.env.example).
 
 ## Tech Stack
 
@@ -60,5 +59,5 @@ No complicated licensing. Be kind and help others learn.
 
 ```bash
 $ npm install -g lice
-$ lice -l onur_dev
+$ lice -l personal_site
 ```

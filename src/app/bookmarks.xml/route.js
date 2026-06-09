@@ -1,14 +1,10 @@
 import { Feed } from 'feed'
 
 import { getBookmarkItems, getBookmarks } from '@/lib/raindrop'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 
 export async function GET() {
-  const bookmarks = await getBookmarks()
-  const siteURL = 'https://onur.dev'
-  const author = {
-    name: 'Onur Şuyalçınkaya',
-    link: 'https://onur.dev'
-  }
+  const [{ author, siteBaseUrl, siteUrl }, bookmarks] = await Promise.all([getSiteMetadata(), getBookmarks()])
 
   const allBookmarkItems = await Promise.all(bookmarks.map((bookmark) => getBookmarkItems(bookmark._id)))
 
@@ -37,15 +33,15 @@ export async function GET() {
 
   const feed = new Feed({
     title: `Bookmarks RSS feed by ${author.name}`,
-    description: 'Stay up to date with my latest selection of various handpicked bookmarks',
-    id: siteURL,
-    link: `${siteURL}/bookmarks`,
+    description: `Stay up to date with the latest bookmark collections from ${author.name}`,
+    id: siteUrl,
+    link: buildAbsoluteUrl(siteBaseUrl, 'bookmarks'),
     language: 'en',
     updated: latestDate,
     copyright: `All rights reserved ${latestDate.getFullYear()}, ${author.name}`,
     author,
     feedLinks: {
-      rss2: `${siteURL}/bookmarks/rss.xml`
+      rss2: buildAbsoluteUrl(siteBaseUrl, 'bookmarks/rss.xml')
     }
   })
 

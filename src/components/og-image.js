@@ -1,4 +1,6 @@
-export const OpenGraphImage = ({ title, description, icon, url }) => {
+export const OpenGraphImage = ({ title, description, icon, siteLabel, url }) => {
+  const sitePath = url ? `/${url}` : ''
+
   return (
     <div
       style={{
@@ -33,7 +35,7 @@ export const OpenGraphImage = ({ title, description, icon, url }) => {
           borderRadius: 9999
         }}
       >
-        {`onur.dev${url ? `/${url}` : ''}`}
+        {siteLabel ? `${siteLabel}${sitePath}` : sitePath}
       </div>
       <span
         style={{

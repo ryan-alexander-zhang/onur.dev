@@ -5,13 +5,10 @@ export default function proxy(request, event) {
   const writingSlug = pathname.match(/\/writing\/(.*)/)?.[1]
 
   async function sendAnalytics() {
-    const URL =
-      process.env.NODE_ENV === 'production'
-        ? 'https://onur.dev/api/increment-views'
-        : 'http://localhost:3000/api/increment-views'
+    const analyticsUrl = new URL('/api/increment-views', request.nextUrl.origin)
 
     try {
-      const res = await fetch(`${URL}?slug=${writingSlug}`, {
+      const res = await fetch(`${analyticsUrl}?slug=${writingSlug}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

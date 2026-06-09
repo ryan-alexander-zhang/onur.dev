@@ -1,13 +1,13 @@
 import { ImageResponse } from 'next/og'
 
-import { sharedMetadata } from '@/app/shared-metadata'
 import { OpenGraphImage } from '@/components/og-image'
 import { getAllPostSlugs, getWritingSeo } from '@/lib/contentful'
 import { getBoldFont, getRegularFont } from '@/lib/fonts'
+import { getSiteMetadata, OG_IMAGE } from '@/lib/site'
 
 export const size = {
-  width: sharedMetadata.ogImage.width,
-  height: sharedMetadata.ogImage.height
+  width: OG_IMAGE.width,
+  height: OG_IMAGE.height
 }
 
 export async function generateStaticParams() {
@@ -18,7 +18,8 @@ export async function generateStaticParams() {
 export async function GET(_, props) {
   const params = await props.params
   const { slug } = params
-  const [seoData, regularFontData, boldFontData] = await Promise.all([
+  const [{ author, siteLabel }, seoData, regularFontData, boldFontData] = await Promise.all([
+    getSiteMetadata(),
     getWritingSeo(slug),
     getRegularFont(),
     getBoldFont()
@@ -32,7 +33,8 @@ export async function GET(_, props) {
     (
       <OpenGraphImage
         title={ogImageTitle || title}
-        description={ogImageSubtitle || 'by Onur Şuyalçınkaya'}
+        description={ogImageSubtitle || `by ${author.name}`}
+        siteLabel={siteLabel}
         url="writing"
       />
     ),

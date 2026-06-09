@@ -1,10 +1,14 @@
-export default function robots() {
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
+
+export default async function robots() {
+  const { siteBaseUrl, siteOrigin } = await getSiteMetadata()
+
   return {
     rules: {
       userAgent: '*',
       allow: '/'
     },
-    sitemap: 'https://onur.dev/sitemap.xml',
-    host: 'https://onur.dev'
+    sitemap: buildAbsoluteUrl(siteBaseUrl, 'sitemap.xml'),
+    host: siteOrigin
   }
 }

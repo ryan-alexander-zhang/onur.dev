@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
@@ -10,6 +8,7 @@ import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { getBookmarkItems, getBookmarks } from '@/lib/raindrop'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
 export async function generateStaticParams() {
@@ -36,6 +35,8 @@ async function fetchData(slug) {
 }
 
 export default async function CollectionPage(props) {
+  'use cache'
+
   cacheLife('max')
   const params = await props.params
   const { slug } = params
@@ -62,16 +63,15 @@ export default async function CollectionPage(props) {
 }
 
 export async function generateMetadata(props) {
-  cacheLife('max')
   const params = await props.params
   const { slug } = params
-  const bookmarks = await getBookmarks()
+  const [{ author, siteBaseUrl }, bookmarks] = await Promise.all([getSiteMetadata(), getBookmarks()])
   const currentBookmark = bookmarks.find((bookmark) => bookmark.slug === slug)
   if (!currentBookmark) return null
 
-  const siteUrl = `/bookmarks/${currentBookmark.slug}`
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, `bookmarks/${currentBookmark.slug}`)
   const seoTitle = `${currentBookmark.title} | Bookmarks`
-  const seoDescription = `A curated selection of various handpicked ${currentBookmark.title.toLowerCase()} bookmarks by Onur Şuyalçınkaya`
+  const seoDescription = `A curated selection of various handpicked ${currentBookmark.title.toLowerCase()} bookmarks by ${author.name}`
 
   return {
     title: seoTitle,
@@ -87,7 +87,7 @@ export async function generateMetadata(props) {
       title: seoTitle,
       description: seoDescription,
       url: siteUrl,
-      images: siteUrl + '/og.png'
+      images: `${siteUrl}/og.png`
     },
     alternates: {
       canonical: siteUrl

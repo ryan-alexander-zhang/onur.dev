@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import { Suspense } from 'react'
 
@@ -10,6 +8,7 @@ import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { getAllLogbook, getPageSeo } from '@/lib/contentful'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 
 async function fetchData() {
   'use cache'
@@ -29,6 +28,8 @@ async function fetchData() {
 }
 
 export default async function Journey() {
+  'use cache'
+
   cacheLife('max')
   const { allLogbook } = await fetchData()
 
@@ -72,14 +73,13 @@ export default async function Journey() {
 }
 
 export async function generateMetadata() {
-  cacheLife('max')
-  const seoData = await getPageSeo('journey')
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getPageSeo('journey')])
   if (!seoData) return null
 
   const {
     seo: { title, description }
   } = seoData
-  const siteUrl = '/journey'
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, 'journey')
 
   return {
     title,

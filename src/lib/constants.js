@@ -1,96 +1,11 @@
-// import { ImSoundcloud2 } from 'react-icons/im'
-// import { PiYoutubeLogo as YoutubeIcon } from 'react-icons/pi'
-import {
-  FaGithub as GithubIcon,
-  // FaInstagram as InstagramIcon,
-  FaPinterest as PinterestIcon
-} from 'react-icons/fa'
-import { FaBluesky as BlueskyIcon, FaMedium as MediumIcon } from 'react-icons/fa6'
-// import { FiYoutube as YoutubeIcon } from 'react-icons/fi'
-import { ImSoundcloud2 as SouncloudIcon } from 'react-icons/im'
-import { IoLogoYoutube as YoutubeIcon } from 'react-icons/io5'
 import {
   LuArmchair as ArmchairIcon,
   LuBookmark as BookmarkIcon,
-  // LuGithub as GithubIcon,
-  // LuInstagram as InstagramIcon,
-  // LuLinkedin as LinkedinIcon,
   LuNavigation as NavigationIcon,
   LuPencilLine as PencilLineIcon,
   LuSparkles as SparklesIcon,
   LuWandSparkles as WandSparklesIcon
-  // LuYoutube as YoutubeIcon
 } from 'react-icons/lu'
-import { RiInstagramFill as InstagramIcon } from 'react-icons/ri'
-import { SiLinkedin as LinkedinIcon } from 'react-icons/si'
-
-// import { TbBrandBluesky as BlueskyIcon } from 'react-icons/tb'
-
-export const PROFILES = {
-  twitter: {
-    title: 'X (Twitter)',
-    username: 'onurschu',
-    url: 'https://twitter.com/intent/user?screen_name=onurschu',
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="size-4"
-        width="44"
-        height="44"
-        viewBox="0 0 24 24"
-        strokeWidth="1.5"
-        stroke="#000000"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
-        <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
-      </svg>
-    )
-  },
-  github: {
-    title: 'GitHub',
-    url: 'https://github.com/suyalcinkaya',
-    icon: <GithubIcon size={16} />
-  },
-  linkedin: {
-    title: 'LinkedIn',
-    url: 'https://www.linkedin.com/in/suyalcinkaya',
-    icon: <LinkedinIcon size={16} />
-  },
-  medium: {
-    title: 'Medium',
-    url: 'https://suyalcinkaya.medium.com',
-    icon: <MediumIcon size={16} />
-  },
-  instagram: {
-    title: 'Instagram',
-    url: 'https://www.instagram.com/jgrmn',
-    icon: <InstagramIcon size={16} />
-  },
-  soundcloud: {
-    title: 'Soundcloud',
-    url: 'https://soundcloud.com/jagerman',
-    icon: <SouncloudIcon size={16} />
-  },
-  youtube: {
-    title: 'YouTube',
-    url: 'https://www.youtube.com/c/jagermanmusic',
-    icon: <YoutubeIcon size={16} />
-  },
-  bluesky: {
-    title: 'Bluesky',
-    url: 'https://staging.bsky.app/profile/onur.dev',
-    icon: <BlueskyIcon size={16} />
-  },
-  pinterest: {
-    title: 'Pinterest',
-    url: 'https://nl.pinterest.com/onurschu',
-    icon: <PinterestIcon size={16} />
-  }
-}
 
 export const TWEETS_COLLECTION_ID = 15896982
 

@@ -1,13 +1,13 @@
 import { ImageResponse } from 'next/og'
 
-import { sharedMetadata } from '@/app/shared-metadata'
 import { OpenGraphImage } from '@/components/og-image'
 import { getAllPageSlugs, getPageSeo } from '@/lib/contentful'
 import { getBoldFont, getRegularFont } from '@/lib/fonts'
+import { getSiteMetadata, OG_IMAGE } from '@/lib/site'
 
 export const size = {
-  width: sharedMetadata.ogImage.width,
-  height: sharedMetadata.ogImage.height
+  width: OG_IMAGE.width,
+  height: OG_IMAGE.height
 }
 
 export async function generateStaticParams() {
@@ -23,7 +23,8 @@ export async function generateStaticParams() {
 export async function GET(_, props) {
   const params = await props.params
   const { slug } = params
-  const [seoData = {}, regularFontData, boldFontData] = await Promise.all([
+  const [{ siteLabel }, seoData = {}, regularFontData, boldFontData] = await Promise.all([
+    getSiteMetadata(),
     getPageSeo(slug),
     getRegularFont(),
     getBoldFont()
@@ -67,6 +68,7 @@ export async function GET(_, props) {
         title={ogImageTitle || title}
         description={ogImageSubtitle || description}
         icon={icon}
+        siteLabel={siteLabel}
         url={slug}
       />
     ),

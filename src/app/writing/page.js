@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import { Suspense } from 'react'
 
@@ -8,6 +6,7 @@ import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { WritingListLayout } from '@/components/writing/writing-list-layout'
 import { getAllPosts, getPageSeo } from '@/lib/contentful'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getSortedPosts } from '@/lib/utils'
 
 async function fetchData() {
@@ -20,6 +19,8 @@ async function fetchData() {
 }
 
 export default async function Writing() {
+  'use cache'
+
   cacheLife('max')
   const { sortedPosts } = await fetchData()
 
@@ -34,14 +35,13 @@ export default async function Writing() {
 }
 
 export async function generateMetadata() {
-  cacheLife('max')
-  const seoData = await getPageSeo('writing')
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getPageSeo('writing')])
   if (!seoData) return null
 
   const {
     seo: { title, description }
   } = seoData
-  const siteUrl = '/writing'
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, 'writing')
 
   return {
     title,

@@ -1,5 +1,3 @@
-'use cache'
-
 import { cacheLife } from 'next/cache'
 import Image from 'next/image'
 
@@ -11,9 +9,12 @@ import { ScrollArea } from '@/components/scroll-area'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { WORKSPACE_ITEMS } from '@/lib/constants'
 import { getPageSeo } from '@/lib/contentful'
+import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { isExternalLink } from '@/lib/utils'
 
 export default async function Workspace() {
+  'use cache'
+
   cacheLife('max')
 
   return (
@@ -79,14 +80,13 @@ export default async function Workspace() {
 }
 
 export async function generateMetadata() {
-  cacheLife('max')
-  const seoData = await getPageSeo('workspace')
+  const [{ siteBaseUrl }, seoData] = await Promise.all([getSiteMetadata(), getPageSeo('workspace')])
   if (!seoData) return null
 
   const {
     seo: { title, description }
   } = seoData
-  const siteUrl = '/workspace'
+  const siteUrl = buildAbsoluteUrl(siteBaseUrl, 'workspace')
 
   return {
     title,

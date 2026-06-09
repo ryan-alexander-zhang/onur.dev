@@ -11,14 +11,11 @@ export const BookmarkCard = ({ bookmark, order }) => {
     return <TweetCard id={tweetId} />
   }
 
-  const href = new URL(bookmark.link)
-  href.searchParams.set('ref', 'onur.dev')
-
   return (
     <a
       key={bookmark._id}
       className="thumbnail-shadow flex aspect-auto min-w-0 cursor-pointer flex-col gap-4 overflow-hidden rounded-xl bg-white p-4 transition-colors duration-300 hover:bg-gray-100"
-      href={href.toString()}
+      href={bookmark.link}
       target="_blank"
       rel="noopener noreferrer"
       data-bookmark-order={order}
