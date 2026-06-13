@@ -16,7 +16,6 @@ my GitHub profile and profile `README`, so updating GitHub is enough to refresh 
 - `/writing` — Writing page.
 - `/writing/[slug]` — Static pre-rendered writing pages using [Contentful](https://www.contentful.com).
 - `/journey` — Journey page.
-- `/workspace` — Workspace page.
 - `/bookmarks` — Bookmarks page.
 - `/bookmarks/[slug]` — Static pre-rendered bookmarks pages using [Raindrop](https://raindrop.io/).
 - `/bookmarks.xml` — Bookmarks XML feed.
