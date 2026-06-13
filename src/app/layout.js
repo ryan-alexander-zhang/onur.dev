@@ -52,9 +52,11 @@ export default async function RootLayout({ children }) {
           <TailwindIndicator />
           <Script
             src="https://unpkg.com/@tinybirdco/flock.js"
+            data-datasource="analytics_events"
             data-host={process.env.NEXT_PUBLIC_TINYBIRD_URL}
+            data-stringify-payload="true"
             data-token={process.env.NEXT_PUBLIC_TINYBIRD_TOKEN}
-            strategy="lazyOnload"
+            strategy="afterInteractive"
           />
         </GithubProfileProvider>
       </body>

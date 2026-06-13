@@ -32,6 +32,10 @@ $ bun dev
 
 Create a `.env` file based on [`.env.example`](./.env.example).
 
+Tinybird analytics resources now live under [`tinybird/`](./tinybird). The runtime site still uses `flock.js`, but the
+datasource, tokens, and query endpoints are defined in-repo. See
+[docs/tinybird-integration.md](./docs/tinybird-integration.md).
+
 ## Tech Stack
 
 - [Next.js](https://nextjs.org)
@@ -40,6 +44,7 @@ Create a `.env` file based on [`.env.example`](./.env.example).
 - [Contentful](https://www.contentful.com)
 - [Raindrop](https://raindrop.io)
 - [Supabase](https://supabase.com)
+- [Tinybird](https://tinybird.co)
 - [Vercel](https://vercel.com)
 
 ## Repo Activity
