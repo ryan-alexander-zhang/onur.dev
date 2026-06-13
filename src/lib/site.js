@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { cache } from 'react'
+import { cacheLife } from 'next/cache'
 
 import { getGithubProfile } from '@/lib/github'
 
@@ -46,7 +46,10 @@ export function buildAbsoluteUrl(siteBaseUrl, path = '') {
   return new URL(path.replace(/^\/+/, ''), normalizeSiteBaseUrl(siteBaseUrl)).toString()
 }
 
-export const getSiteMetadata = cache(async () => {
+export async function getSiteMetadata() {
+  'use cache'
+  cacheLife('hours')
+
   const profile = await getGithubProfile()
   const siteBaseUrl = normalizeSiteBaseUrl(profile.websiteUrl || profile.profileUrl || FALLBACK_SITE_URL)
   const siteUrl = buildAbsoluteUrl(siteBaseUrl)
@@ -70,4 +73,4 @@ export const getSiteMetadata = cache(async () => {
     },
     keywords: unique([title, description, siteLabel, twitterHandle])
   }
-})
+}

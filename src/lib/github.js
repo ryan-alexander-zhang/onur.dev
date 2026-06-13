@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { cache } from 'react'
+import { cacheLife } from 'next/cache'
 
 const PROFILE_OWNER = 'ryan-alexander-zhang'
 const PROFILE_REPOSITORY = 'ryan-alexander-zhang/ryan-alexander-zhang'
@@ -31,11 +31,21 @@ const FALLBACK_GITHUB_PROFILE = {
   onlineLinks: [{ title: 'GitHub', url: GITHUB_PROFILE_URL, iconKey: 'github' }]
 }
 
-const fetchGithubProfile = cache(async () => {
+function getGithubHeaders(accept) {
+  const token = process.env.GITHUB_TOKEN || process.env.GITHUB_ACCESS_TOKEN
+
+  return {
+    Accept: accept,
+    'User-Agent': `${PROFILE_OWNER}-site`,
+    ...(token && {
+      Authorization: `Bearer ${token}`
+    })
+  }
+}
+
+async function fetchGithubProfile() {
   const response = await fetch(GITHUB_USER_API_URL, {
-    headers: {
-      Accept: 'application/vnd.github+json'
-    },
+    headers: getGithubHeaders('application/vnd.github+json'),
     next: {
       revalidate: 60 * 60
     },
@@ -47,7 +57,7 @@ const fetchGithubProfile = cache(async () => {
   }
 
   return response.json()
-})
+}
 
 function ensureAbsoluteUrl(url) {
   if (!url) return ''
@@ -92,6 +102,9 @@ function extractIntroSection(markdown) {
 }
 
 export async function getGithubProfile() {
+  'use cache'
+  cacheLife('hours')
+
   try {
     const profile = await fetchGithubProfile()
     const profileUrl = profile?.html_url || FALLBACK_GITHUB_PROFILE.profileUrl
@@ -114,11 +127,12 @@ export async function getGithubProfile() {
 }
 
 export async function getHomeProfileReadme() {
+  'use cache'
+  cacheLife('hours')
+
   try {
     const response = await fetch(README_URL, {
-      headers: {
-        Accept: 'text/plain; charset=utf-8'
-      },
+      headers: getGithubHeaders('text/plain; charset=utf-8'),
       next: {
         revalidate: 60 * 60
       },

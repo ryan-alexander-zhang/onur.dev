@@ -32,6 +32,9 @@ $ bun dev
 
 Create a `.env` file based on [`.env.example`](./.env.example).
 
+If Vercel hits GitHub API rate limits during build, set `GITHUB_TOKEN` in the project environment variables. The site can
+fall back without it, but authenticated requests are more reliable for profile metadata during prerendering.
+
 To enable page view tracking, apply the SQL in [`supabase/migrations/20260613195000_page_views.sql`](./supabase/migrations/20260613195000_page_views.sql)
 to your Supabase project. This creates the `public.pages` table, exposes read access for the browser client, registers
 the table for Realtime, and installs the `increment_view_count(page_slug)` RPC used by the Next.js API route.

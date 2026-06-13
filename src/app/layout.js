@@ -65,9 +65,13 @@ export default async function RootLayout({ children }) {
 }
 
 export async function generateMetadata() {
+  'use cache'
+  cacheLife('hours')
+
   const { title, description, keywords, siteUrl, twitterHandle } = await getSiteMetadata()
 
   return {
+    metadataBase: new URL(siteUrl),
     robots: {
       index: true,
       follow: true
