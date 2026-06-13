@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 
 export default function proxy(request, event) {
   const { pathname } = request.nextUrl
-  const writingSlug = pathname.match(/\/writing\/(.*)/)?.[1]
+  const pathSegments = pathname.split('/').filter(Boolean)
+  const writingSlug = pathSegments[0] === 'writing' && pathSegments.length === 2 ? pathSegments[1] : null
 
   async function sendAnalytics() {
     const analyticsUrl = new URL('/api/increment-views', request.nextUrl.origin)
+    analyticsUrl.searchParams.set('slug', writingSlug)
 
     try {
-      const res = await fetch(`${analyticsUrl}?slug=${writingSlug}`, {
+      const res = await fetch(analyticsUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -34,7 +36,7 @@ export default function proxy(request, event) {
 export const config = {
   matcher: [
     {
-      source: '/writing/:path/',
+      source: '/writing/:path*',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' }

@@ -11,7 +11,9 @@ export async function POST(request) {
   if (!slug) return NextResponse.json({ error: 'Missing slug parameter' }, { status: 400 })
 
   try {
-    await supabase.rpc('increment_view_count', { page_slug: slug })
+    const { error } = await supabase.rpc('increment_view_count', { page_slug: slug })
+    if (error) throw error
+
     return NextResponse.json({ messsage: `View count incremented successfully for slug: ${slug}` }, { status: 200 })
   } catch (error) {
     console.error('Error incrementing view count:', error)

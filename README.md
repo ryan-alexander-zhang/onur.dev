@@ -32,6 +32,10 @@ $ bun dev
 
 Create a `.env` file based on [`.env.example`](./.env.example).
 
+To enable page view tracking, apply the SQL in [`supabase/migrations/20260613195000_page_views.sql`](./supabase/migrations/20260613195000_page_views.sql)
+to your Supabase project. This creates the `public.pages` table, exposes read access for the browser client, registers
+the table for Realtime, and installs the `increment_view_count(page_slug)` RPC used by the Next.js API route.
+
 Tinybird analytics resources now live under [`tinybird/`](./tinybird). The runtime site still uses `flock.js`, but the
 datasource, tokens, and query endpoints are defined in-repo. See
 [docs/tinybird-integration.md](./docs/tinybird-integration.md).
