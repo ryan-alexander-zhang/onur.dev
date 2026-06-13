@@ -65,13 +65,18 @@ export default async function RootLayout({ children }) {
 }
 
 export async function generateMetadata() {
-  'use cache'
-  cacheLife('hours')
-
   const { title, description, keywords, siteUrl, twitterHandle } = await getSiteMetadata()
+  const iconVersion = '20260613-r1'
 
   return {
-    metadataBase: new URL(siteUrl),
+    icons: {
+      icon: [
+        { url: `/favicon.ico?v=${iconVersion}`, sizes: 'any' },
+        { url: `/icon.png?v=${iconVersion}`, type: 'image/png', sizes: '512x512' }
+      ],
+      shortcut: [{ url: `/favicon.ico?v=${iconVersion}` }],
+      apple: [{ url: `/apple-icon.png?v=${iconVersion}`, sizes: '180x180', type: 'image/png' }]
+    },
     robots: {
       index: true,
       follow: true
