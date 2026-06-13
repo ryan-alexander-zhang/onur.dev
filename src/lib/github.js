@@ -68,7 +68,7 @@ function ensureAbsoluteUrl(url) {
 function getOnlineLinks({ profileUrl, websiteUrl, twitterUsername }) {
   return [
     { title: 'GitHub', url: profileUrl, iconKey: 'github' },
-    ...(websiteUrl ? [{ title: 'Website', url: websiteUrl, iconKey: 'website' }] : []),
+    ...(websiteUrl ? [{ title: 'Eng Copilot', url: websiteUrl, iconKey: 'website' }] : []),
     ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : [])
   ]
 }
