@@ -1,3 +1,4 @@
+import { cacheLife } from 'next/cache'
 import NextLink from 'next/link'
 import { Suspense } from 'react'
 
@@ -13,6 +14,9 @@ import { getGithubProfile, getHomeProfileReadme } from '@/lib/github'
 import { getItemsByYear, getSortedPosts } from '@/lib/utils'
 
 async function fetchData() {
+  'use cache'
+  cacheLife('hours')
+
   const [allPosts, profileReadme, githubProfile] = await Promise.all([
     getAllPosts(),
     getHomeProfileReadme(),
