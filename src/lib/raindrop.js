@@ -1,6 +1,28 @@
 import 'server-only'
 
-import { COLLECTION_IDS } from '@/lib/constants'
+function getRaindropCollectionIds() {
+  const rawCollectionIds = process.env.RAINDROP_COLLECTION_IDS
+  if (!rawCollectionIds) return []
+
+  try {
+    const parsedCollectionIds = JSON.parse(rawCollectionIds)
+    if (!Array.isArray(parsedCollectionIds)) {
+      throw new Error('RAINDROP_COLLECTION_IDS must be a JSON array')
+    }
+
+    const normalizedCollectionIds = parsedCollectionIds.map((id) => Number(id))
+    if (normalizedCollectionIds.some((id) => !Number.isInteger(id))) {
+      throw new Error('RAINDROP_COLLECTION_IDS must contain only integers')
+    }
+
+    return [...new Set(normalizedCollectionIds)]
+  } catch (error) {
+    console.error(`Invalid RAINDROP_COLLECTION_IDS: ${error.message}`)
+    return []
+  }
+}
+
+const RAINDROP_COLLECTION_IDS = getRaindropCollectionIds()
 
 const options = {
   cache: 'force-cache',
@@ -53,7 +75,7 @@ export const getBookmarks = async () => {
     }
 
     const bookmarks = await response.json()
-    return bookmarks.items.filter((bookmark) => COLLECTION_IDS.includes(bookmark._id))
+    return bookmarks.items.filter((bookmark) => RAINDROP_COLLECTION_IDS.includes(bookmark._id))
   } catch (error) {
     console.error(`Failed to fetch bookmarks: ${error.message}`)
     return null
