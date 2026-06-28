@@ -3,13 +3,16 @@ import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
+import { ContentLayoutWithToc } from '@/components/contentful/content-layout-with-toc'
 import { RichText } from '@/components/contentful/rich-text'
+import { MobileTableOfContents } from '@/components/contentful/table-of-contents'
 import { FloatingHeader } from '@/components/floating-header'
 import { GradientBg } from '@/components/gradient-bg'
 import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
 import { getAllPageSlugs, getPage, getPageSeo } from '@/lib/contentful'
+import { extractRichTextHeadings } from '@/lib/contentful-rich-text'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { isDevelopment } from '@/lib/utils'
 
@@ -42,18 +45,23 @@ export default async function PageSlug(props) {
   const {
     page: { title, content }
   } = await fetchData(slug)
+  const headings = extractRichTextHeadings(content?.json)
 
   return (
     <ScrollArea useScrollAreaId>
       <GradientBg />
-      <FloatingHeader scrollTitle={title} />
+      <FloatingHeader scrollTitle={title}>
+        <MobileTableOfContents headings={headings} />
+      </FloatingHeader>
       <div className="content-wrapper">
-        <div className="content">
-          <PageTitle title={title} />
-          <Suspense fallback={<ScreenLoadingSpinner />}>
-            <RichText content={content} />
-          </Suspense>
-        </div>
+        <ContentLayoutWithToc headings={headings}>
+          <>
+            <PageTitle title={title} />
+            <Suspense fallback={<ScreenLoadingSpinner />}>
+              <RichText content={content} />
+            </Suspense>
+          </>
+        </ContentLayoutWithToc>
       </div>
     </ScrollArea>
   )

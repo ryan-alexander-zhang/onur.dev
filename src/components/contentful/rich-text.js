@@ -5,15 +5,32 @@ import dynamic from 'next/dynamic'
 import { Link } from '@/components/link'
 import { ShowInView } from '@/components/show-in-view'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { createHeadingId, getRichTextPlainText } from '@/lib/contentful-rich-text'
 
 const TweetCard = dynamic(() => import('@/components/tweet-card/tweet-card').then((mod) => mod.TweetCard))
 const CodeBlock = dynamic(() => import('@/components/contentful/code-block').then((mod) => mod.CodeBlock))
 const DynamicIframe = dynamic(() => import('@/components/contentful/iframe').then((mod) => mod.Iframe))
-import { dasherize } from '@/lib/utils'
 
 function options(links) {
   const findAsset = (id) => links?.assets.block.find((item) => item.sys.id === id)
   const findInlineEntry = (id) => links?.entries.inline.find((item) => item.sys.id === id)
+  const headingIds = new Map()
+
+  const renderHeading = (node, children, tagName) => {
+    const headingId = createHeadingId(getRichTextPlainText(node).trim(), headingIds)
+    const TagName = tagName
+
+    return (
+      <TagName
+        id={headingId}
+        className="group relative mt-6 mb-2 w-fit cursor-pointer before:absolute before:-left-4 hover:before:content-['#']"
+      >
+        <a href={`#${headingId}`} className="group-hover:underline group-hover:underline-offset-4">
+          {children}
+        </a>
+      </TagName>
+    )
+  }
 
   return {
     renderMark: {
@@ -22,34 +39,8 @@ function options(links) {
       [MARKS.CODE]: (text) => <code className="inline-code">{text}</code>
     },
     renderNode: {
-      [BLOCKS.HEADING_2]: (_, children) => {
-        const id = dasherize(children)
-        const url = `h2-${id}`
-        return (
-          <h2
-            id={url}
-            className="group relative mt-6 mb-2 w-fit cursor-pointer before:absolute before:-left-4 hover:before:content-['#']"
-          >
-            <a href={`#${url}`} className="group-hover:underline group-hover:underline-offset-4">
-              {children}
-            </a>
-          </h2>
-        )
-      },
-      [BLOCKS.HEADING_3]: (_, children) => {
-        const id = dasherize(children)
-        const url = `h3-${id}`
-        return (
-          <h3
-            id={url}
-            className="group relative mt-6 mb-2 w-fit cursor-pointer before:absolute before:-left-4 hover:before:content-['#']"
-          >
-            <a href={`#${url}`} className="group-hover:underline group-hover:underline-offset-4">
-              {children}
-            </a>
-          </h3>
-        )
-      },
+      [BLOCKS.HEADING_2]: (node, children) => renderHeading(node, children, 'h2'),
+      [BLOCKS.HEADING_3]: (node, children) => renderHeading(node, children, 'h3'),
       // Must be a <div> instead of <p> to avoid descendant issue, hence to avoid mismatching UI between server and client on hydration.
       [BLOCKS.PARAGRAPH]: (_, children) => (
         <div className="mb-4 leading-[1.75] last:mb-0 [&:has(+ul)]:mb-1">{children}</div>

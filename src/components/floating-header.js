@@ -41,7 +41,6 @@ export const FloatingHeader = memo(({ scrollTitle, title, goBackLink, bookmarks,
   const [transformValues, setTransformValues] = useState({ translateY: 0, opacity: scrollTitle ? 0 : 1 })
   const pathname = usePathname()
   const isWritingIndexPage = pathname === '/writing'
-  const isWritingPath = pathname.startsWith('/writing')
   const isBookmarksIndexPage = pathname === '/bookmarks'
   const isBookmarkPath = pathname.startsWith('/bookmarks')
 
@@ -117,7 +116,7 @@ export const FloatingHeader = memo(({ scrollTitle, title, goBackLink, bookmarks,
             </div>
           </div>
           {/* This is a hack to show writing views with framer motion reveal effect */}
-          {scrollTitle && isWritingPath && <div className="flex min-w-[50px] justify-end">{children}</div>}
+          {scrollTitle && children && <div className="ml-2 flex shrink-0 items-center justify-end">{children}</div>}
         </div>
       </div>
     </header>

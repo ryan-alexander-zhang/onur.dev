@@ -3,12 +3,15 @@ import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 
 import { ClientOnly } from '@/components/client-only'
+import { ContentLayoutWithToc } from '@/components/contentful/content-layout-with-toc'
 import { RichText } from '@/components/contentful/rich-text'
+import { MobileTableOfContents } from '@/components/contentful/table-of-contents'
 import { FloatingHeader } from '@/components/floating-header'
 import { PageTitle } from '@/components/page-title'
 import { ScrollArea } from '@/components/scroll-area'
 import { WritingViews } from '@/components/writing-views'
 import { getAllPostSlugs, getPost, getWritingSeo } from '@/lib/contentful'
+import { extractRichTextHeadings } from '@/lib/contentful-rich-text'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getDateTimeFormat, isDevelopment } from '@/lib/utils'
 
@@ -50,6 +53,7 @@ export default async function WritingSlug(props) {
   const dateString = getDateTimeFormat(postDate)
   const datePublished = new Date(postDate).toISOString()
   const dateModified = new Date(updatedAt).toISOString()
+  const headings = extractRichTextHeadings(content?.json)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -69,21 +73,26 @@ export default async function WritingSlug(props) {
     <>
       <ScrollArea className="bg-white" useScrollAreaId>
         <FloatingHeader scrollTitle={title} goBackLink="/writing">
-          <WritingViews slug={slug} />
+          <div className="flex items-center gap-1">
+            <MobileTableOfContents headings={headings} />
+            <WritingViews slug={slug} />
+          </div>
         </FloatingHeader>
         <div className="content-wrapper @container/writing">
-          <article className="content">
-            <PageTitle
-              title={title}
-              subtitle={
-                <time dateTime={postDate} className="text-gray-400">
-                  {dateString}
-                </time>
-              }
-              className="mb-6 flex flex-col gap-3"
-            />
-            <RichText content={content} />
-          </article>
+          <ContentLayoutWithToc headings={headings}>
+            <>
+              <PageTitle
+                title={title}
+                subtitle={
+                  <time dateTime={postDate} className="text-gray-400">
+                    {dateString}
+                  </time>
+                }
+                className="mb-6 flex flex-col gap-3"
+              />
+              <RichText content={content} />
+            </>
+          </ContentLayoutWithToc>
         </div>
       </ScrollArea>
       <ClientOnly>
