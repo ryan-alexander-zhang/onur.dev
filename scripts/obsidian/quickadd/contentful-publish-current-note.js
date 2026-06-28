@@ -5,6 +5,7 @@ const DEFAULT_CMA_BASE_URL = 'https://api.contentful.com'
 const DEFAULT_UPLOAD_BASE_URL = 'https://upload.contentful.com'
 const DEFAULT_LOCALE = 'en-US'
 const FRONTMATTER_REGEX = /^---\n[\s\S]*?\n---\n?/
+const CONTENTFUL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const CONTENT_TYPES = {
   PAGE: 'page',
@@ -163,19 +164,27 @@ async function syncCurrentNote(params, settings, mode) {
     await writeFrontmatter(app, obsidian, activeFile, rawMarkdown, nextFrontmatter)
 
     let revalidated = false
+    let revalidateError = ''
     if (mode === 'publish' && config.revalidateUrl) {
-      revalidated = await triggerRevalidation(config, note)
+      try {
+        revalidated = await triggerRevalidation(config, note)
+      } catch (error) {
+        revalidateError = error instanceof Error ? error.message : String(error)
+      }
     }
 
     const summary = [
       `${mode === 'publish' ? 'Published' : 'Synced draft'} ${activeFile.basename}`,
       `type=${note.contentType}`,
       `entryId=${syncResult.entry.sys.id}`,
-      revalidated ? 'revalidated=yes' : 'revalidated=no'
+      revalidateError ? 'revalidated=failed' : revalidated ? 'revalidated=yes' : 'revalidated=no'
     ].join(' | ')
 
     if (config.showNotice) {
-      new obsidian.Notice(summary, 9000)
+      new obsidian.Notice(summary, revalidateError ? 12000 : 9000)
+      if (revalidateError) {
+        new obsidian.Notice(`Revalidation failed: ${revalidateError}`, 12000)
+      }
     }
 
     return {
@@ -183,6 +192,7 @@ async function syncCurrentNote(params, settings, mode) {
       seoEntryId: syncResult.seoEntry?.sys?.id ?? null,
       mode,
       revalidated,
+      revalidateError: revalidateError || null,
       file: activeFile.path,
       summary
     }
@@ -405,6 +415,13 @@ async function markdownToRichText(markdown, context) {
       continue
     }
 
+    const tableMatch = matchTable(lines, index)
+    if (tableMatch) {
+      content.push(tableMatch.node)
+      index = tableMatch.nextIndex
+      continue
+    }
+
     if (isBlockquote(trimmed)) {
       const { nextIndex, node } = collectBlockquote(lines, index)
       content.push(node)
@@ -597,7 +614,7 @@ function normalizeNote(file, rawMarkdown, frontmatter, defaultLocale) {
     }
   }
 
-  const slug = slugify(readString(frontmatter.slug) || title)
+  const slug = normalizeRichContentSlug(readString(frontmatter.slug) || title)
   const entryId = readString(frontmatter.contentful_entry_id) || buildStableId(contentType, `${contentType}:${slug}`)
   const seoEntryId = readString(frontmatter.contentful_seo_entry_id) || buildStableId('seo', `${entryId}:${slug}`)
   const seoDescription =
@@ -682,7 +699,16 @@ function createContentfulClient(config) {
           return null
         }
 
-        const details = payload?.message || payload?.details?.errors?.[0]?.details || text || response.statusText
+        const details = formatContentfulErrorDetails(payload, text || response.statusText)
+        if (response.status === 401) {
+          throw new Error(
+            `Contentful API error 401: ${details}. ` +
+              'The QuickAdd "Management Token" must use a Contentful Management token, ' +
+              'not CONTENTFUL_ACCESS_TOKEN or CONTENTFUL_PREVIEW_ACCESS_TOKEN. ' +
+              `If you are referencing an env var, use "${buildEnvSettingExample('CONTENTFUL_MANAGEMENT_TOKEN')}".`
+          )
+        }
+
         throw new Error(`Contentful API error ${response.status}: ${details}`)
       }
 
@@ -1001,7 +1027,7 @@ function readString(value) {
 
 function readResolvedSetting(value, options = {}) {
   const directValue = readString(value)
-  const referencedEnvKey = readEnvReference(directValue)
+  const referencedEnvKey = readEnvReference(directValue, options)
 
   if (referencedEnvKey) {
     const envValue = readString(process.env[referencedEnvKey])
@@ -1013,6 +1039,13 @@ function readResolvedSetting(value, options = {}) {
   }
 
   if (directValue) {
+    if (looksLikeEnvReference(directValue)) {
+      throw new Error(
+        `"${directValue}" looks like an environment variable reference for ${options.fieldName || 'setting'}. ` +
+          `Use "${buildEnvSettingExample(options.envKey)}" instead, or paste the actual value.`
+      )
+    }
+
     return directValue
   }
 
@@ -1026,9 +1059,56 @@ function readResolvedSetting(value, options = {}) {
   return readString(options.defaultValue)
 }
 
-function readEnvReference(value) {
-  const match = String(value || '').match(/^env:(.+)$/i)
-  return match ? match[1].trim() : ''
+function readEnvReference(value, options = {}) {
+  const normalized = readString(value)
+  if (!normalized) {
+    return ''
+  }
+
+  const explicitMatch = normalized.match(/^env:(.+)$/i)
+  if (explicitMatch) {
+    return explicitMatch[1].trim()
+  }
+
+  const shellMatch =
+    normalized.match(/^\$([A-Za-z_][A-Za-z0-9_]*)$/) || normalized.match(/^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/)
+  if (shellMatch) {
+    return shellMatch[1].trim()
+  }
+
+  if (looksLikeBareEnvKey(normalized)) {
+    if (readString(process.env[normalized])) {
+      return normalized
+    }
+
+    if (options.envKey && normalized === options.envKey) {
+      return normalized
+    }
+  }
+
+  return ''
+}
+
+function looksLikeEnvReference(value) {
+  const normalized = readString(value)
+  if (!normalized) {
+    return false
+  }
+
+  return (
+    /^env:.+/i.test(normalized) ||
+    /^\$([A-Za-z_][A-Za-z0-9_]*)$/.test(normalized) ||
+    /^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/.test(normalized) ||
+    looksLikeBareEnvKey(normalized)
+  )
+}
+
+function looksLikeBareEnvKey(value) {
+  return /^[A-Z_][A-Z0-9_]*$/.test(String(value || ''))
+}
+
+function buildEnvSettingExample(envKey) {
+  return `env:${envKey || 'YOUR_ENV_KEY'}`
 }
 
 function readStringArray(value) {
@@ -1081,6 +1161,20 @@ function todayDate() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function normalizeRichContentSlug(value) {
+  const rawSlug = readString(value)
+  const slug = slugify(rawSlug)
+
+  if (!CONTENTFUL_SLUG_PATTERN.test(slug)) {
+    throw new Error(
+      `Invalid slug "${rawSlug}". Contentful post/page slugs must be lowercase kebab-case ASCII, ` +
+        'for example "my-post-title".'
+    )
+  }
+
+  return slug
+}
+
 function slugify(value) {
   return String(value || '')
     .toLowerCase()
@@ -1092,6 +1186,54 @@ function slugify(value) {
 
 function buildStableId(prefix, seed) {
   return `${prefix}-${crypto.createHash('sha1').update(String(seed)).digest('hex').slice(0, 24)}`
+}
+
+function formatContentfulErrorDetails(payload, fallback) {
+  const message = readString(payload?.message)
+  const errors = Array.isArray(payload?.details?.errors) ? payload.details.errors : []
+
+  if (errors.length === 0) {
+    return message || fallback
+  }
+
+  const formatted = errors.map(formatContentfulValidationError).filter(Boolean).join(' | ')
+  if (!formatted) {
+    return message || fallback
+  }
+
+  return message ? `${message}. ${formatted}` : formatted
+}
+
+function formatContentfulValidationError(error) {
+  const pathValue = Array.isArray(error?.path)
+    ? error.path.filter((part) => part !== undefined && part !== null && String(part).trim() !== '').join('.')
+    : readString(error?.path)
+  const detailsValue =
+    formatContentfulErrorValue(error?.details) || readString(error?.message) || readString(error?.name)
+  const value = formatContentfulErrorValue(error?.value)
+  const parts = [pathValue, detailsValue, value ? `value=${value}` : ''].filter(Boolean)
+
+  return parts.join(': ')
+}
+
+function formatContentfulErrorValue(value) {
+  if (typeof value === 'string') {
+    return value.trim()
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+
+  if (value && typeof value === 'object') {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return ''
+    }
+  }
+
+  return ''
 }
 
 function extractFirstHeading(markdown) {
@@ -1245,6 +1387,143 @@ function mapHeadingLevel(level) {
   return 'heading-3'
 }
 
+function matchTable(lines, startIndex) {
+  const headerRow = parseMarkdownTableRow(lines[startIndex])
+  if (!headerRow) {
+    return null
+  }
+
+  const dividerLine = lines[startIndex + 1]
+  if (!isMarkdownTableDivider(dividerLine, headerRow.length)) {
+    return null
+  }
+
+  const rows = [createTableRow(headerRow, true)]
+  let index = startIndex + 2
+
+  while (index < lines.length) {
+    const trimmed = lines[index].trim()
+    if (trimmed === '') {
+      break
+    }
+
+    const row = parseMarkdownTableRow(lines[index], headerRow.length)
+    if (!row) {
+      break
+    }
+
+    rows.push(createTableRow(row, false))
+    index += 1
+  }
+
+  return {
+    nextIndex: index,
+    node: {
+      nodeType: 'table',
+      data: {},
+      content: rows
+    }
+  }
+}
+
+function parseMarkdownTableRow(line, columnCount) {
+  if (typeof line !== 'string') {
+    return null
+  }
+
+  const trimmed = line.trim()
+  if (!trimmed.includes('|')) {
+    return null
+  }
+
+  const cells = splitMarkdownTableCells(trimmed)
+  if (cells.length < 2) {
+    return null
+  }
+
+  if (columnCount && cells.length > columnCount) {
+    return null
+  }
+
+  return normalizeTableCells(cells, columnCount ?? cells.length)
+}
+
+function splitMarkdownTableCells(line) {
+  let normalized = line.trim()
+  if (normalized.startsWith('|')) {
+    normalized = normalized.slice(1)
+  }
+  if (normalized.endsWith('|')) {
+    normalized = normalized.slice(0, -1)
+  }
+
+  const cells = []
+  let current = ''
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    const character = normalized[index]
+    const nextCharacter = normalized[index + 1]
+
+    if (character === '\\' && (nextCharacter === '|' || nextCharacter === '\\')) {
+      current += nextCharacter
+      index += 1
+      continue
+    }
+
+    if (character === '|') {
+      cells.push(current.trim())
+      current = ''
+      continue
+    }
+
+    current += character
+  }
+
+  cells.push(current.trim())
+  return cells
+}
+
+function isMarkdownTableDivider(line, columnCount) {
+  const cells = parseMarkdownTableRow(line, columnCount)
+  if (!cells || cells.length !== columnCount) {
+    return false
+  }
+
+  return cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, '')))
+}
+
+function normalizeTableCells(cells, columnCount) {
+  const normalized = cells.slice(0, columnCount)
+
+  while (normalized.length < columnCount) {
+    normalized.push('')
+  }
+
+  return normalized
+}
+
+function createTableRow(cells, isHeader) {
+  return {
+    nodeType: 'table-row',
+    data: {},
+    content: cells.map((cell) => ({
+      nodeType: isHeader ? 'table-header-cell' : 'table-cell',
+      data: {},
+      content: [createParagraphNode(cell)]
+    }))
+  }
+}
+
+function createParagraphNode(text) {
+  const content = parseInlineContent(text)
+
+  return {
+    nodeType: 'paragraph',
+    data: {},
+    content: content.length > 0 ? content : parseMarkedText('')
+  }
+}
+
 function isBlockquote(line) {
   return /^>\s?/.test(line)
 }
@@ -1337,7 +1616,7 @@ function collectList(lines, startIndex, listType) {
       continue
     }
 
-    if (startsBlock(trimmed)) {
+    if (startsBlock(lines, index)) {
       break
     }
 
@@ -1379,7 +1658,7 @@ function collectParagraph(lines, startIndex) {
       break
     }
 
-    if (parts.length > 0 && startsBlock(trimmed)) {
+    if (parts.length > 0 && startsBlock(lines, index)) {
       break
     }
 
@@ -1393,13 +1672,16 @@ function collectParagraph(lines, startIndex) {
   }
 }
 
-function startsBlock(line) {
+function startsBlock(linesOrLine, startIndex) {
+  const line = Array.isArray(linesOrLine) ? linesOrLine[startIndex]?.trim() || '' : linesOrLine
+
   return Boolean(
     matchCodeFence(line) ||
       matchContentfulDirective(line) ||
       matchImageLine(line) ||
       isHorizontalRule(line) ||
       matchHeading(line) ||
+      (Array.isArray(linesOrLine) && matchTable(linesOrLine, startIndex)) ||
       isBlockquote(line) ||
       matchListLine(line)
   )

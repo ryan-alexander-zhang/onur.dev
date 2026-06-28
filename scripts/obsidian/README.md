@@ -80,6 +80,9 @@
 
 如果 `Revalidate URL` 和 `Revalidate Secret` 都配置了，正式发布后会顺带调用站点的按需刷新接口。
 
+如果 `Revalidate URL` 指向本地地址，例如
+`http://localhost:3000/api/revalidate`，那发布时需要对应站点正在运行；否则会出现 revalidation 的网络错误。
+
 这些文本参数支持两种来源：
 
 - 直接填值
@@ -107,6 +110,17 @@
 - 如果你在 macOS 上是从 Finder / Dock 启动 Obsidian，GUI 进程通常拿不到你 shell 里的 `~/.zshrc` / `~/.zprofile` 环境变量
 - 更稳的做法是从 terminal 启动 Obsidian，或者用 `launchctl setenv KEY value` 给 GUI 进程注入环境变量
 
+### 常见 401 排查
+
+如果你看到 `Contentful API error 401: Access token invalid`，优先检查这几项：
+
+- `Management Token` 必须是 `CONTENTFUL_MANAGEMENT_TOKEN`
+- 不要把 `CONTENTFUL_ACCESS_TOKEN` 或 `CONTENTFUL_PREVIEW_ACCESS_TOKEN` 填到 QuickAdd 的 `Management Token`
+- 推荐把 `Management Token` 填成 `env:CONTENTFUL_MANAGEMENT_TOKEN`
+- 新版脚本也兼容 `$CONTENTFUL_MANAGEMENT_TOKEN` 和 `${CONTENTFUL_MANAGEMENT_TOKEN}`
+- 如果你填的是环境变量名，但 Obsidian 进程里没有这个变量，脚本会直接报环境变量未设置
+- `.env` 文件本身不会被 Obsidian 自动读取；脚本读的是 Obsidian 进程里的 `process.env`
+
 ## 3. Frontmatter 约定
 
 ### Writing / Post
@@ -129,6 +143,8 @@ contentful_seo_entry_id: ''
 contentful_locale: en-US
 ---
 ```
+
+`slug` 必须是小写 kebab-case ASCII，例如 `my-post-title`。标题可以是中文，但不要把纯中文直接填进 `slug`。
 
 ### Journal / Logbook
 
@@ -177,6 +193,7 @@ contentful_locale: en-US
 - 分隔线
 - 行内 `bold` / `italic` / `code`
 - Markdown 链接
+- Markdown 表格
 - fenced code block
 - Markdown 图片
 - Obsidian 图片 `![[image.png]]`

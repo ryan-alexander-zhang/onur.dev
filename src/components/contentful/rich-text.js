@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 
 import { Link } from '@/components/link'
 import { ShowInView } from '@/components/show-in-view'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const TweetCard = dynamic(() => import('@/components/tweet-card/tweet-card').then((mod) => mod.TweetCard))
 const CodeBlock = dynamic(() => import('@/components/contentful/code-block').then((mod) => mod.CodeBlock))
@@ -63,6 +64,34 @@ function options(links) {
           {children}
         </blockquote>
       ),
+      [BLOCKS.TABLE]: (node, children) => {
+        const headerRows = []
+        const bodyRows = []
+
+        children.forEach((child, index) => {
+          const row = node.content[index]
+          const isHeaderRow = row?.content?.every((cell) => cell.nodeType === BLOCKS.TABLE_HEADER_CELL)
+
+          if (isHeaderRow && bodyRows.length === 0) {
+            headerRows.push(child)
+            return
+          }
+
+          bodyRows.push(child)
+        })
+
+        return (
+          <div className="mb-6">
+            <Table>
+              {headerRows.length > 0 && <TableHeader>{headerRows}</TableHeader>}
+              {bodyRows.length > 0 && <TableBody>{bodyRows}</TableBody>}
+            </Table>
+          </div>
+        )
+      },
+      [BLOCKS.TABLE_ROW]: (_, children) => <TableRow>{children}</TableRow>,
+      [BLOCKS.TABLE_HEADER_CELL]: (_, children) => <TableHead className="[&>div]:mb-0">{children}</TableHead>,
+      [BLOCKS.TABLE_CELL]: (_, children) => <TableCell className="[&>div]:mb-0">{children}</TableCell>,
       [BLOCKS.EMBEDDED_ASSET]: (node) => {
         const asset = findAsset(node.data.target.sys.id)
         if (!asset) return null

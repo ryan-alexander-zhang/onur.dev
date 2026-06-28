@@ -157,6 +157,40 @@ upsert_content_type() {
   echo "Published content type: $content_type_id"
 }
 
+build_rich_text_validations() {
+  jq -n '
+    [
+      {
+        enabledNodeTypes: [
+          "paragraph",
+          "text",
+          "heading-1",
+          "heading-2",
+          "heading-3",
+          "heading-4",
+          "heading-5",
+          "heading-6",
+          "ordered-list",
+          "unordered-list",
+          "list-item",
+          "hr",
+          "blockquote",
+          "hyperlink",
+          "entry-hyperlink",
+          "asset-hyperlink",
+          "embedded-entry-inline",
+          "embedded-entry-block",
+          "embedded-asset-block",
+          "table",
+          "table-row",
+          "table-cell",
+          "table-header-cell"
+        ]
+      }
+    ]
+  '
+}
+
 build_seo_payload() {
   jq -n '
     {
@@ -316,7 +350,10 @@ build_carousel_payload() {
 }
 
 build_page_payload() {
-  jq -n '
+  local rich_text_validations
+  rich_text_validations="$(build_rich_text_validations)"
+
+  jq -n --argjson richTextValidations "$rich_text_validations" '
     {
       name: "Page",
       description: "Generic page entry for /[slug] routes.",
@@ -368,7 +405,8 @@ build_page_payload() {
           id: "content",
           name: "Content",
           type: "RichText",
-          required: true
+          required: true,
+          validations: $richTextValidations
         }
       ]
     }
@@ -376,7 +414,10 @@ build_page_payload() {
 }
 
 build_post_payload() {
-  jq -n '
+  local rich_text_validations
+  rich_text_validations="$(build_rich_text_validations)"
+
+  jq -n --argjson richTextValidations "$rich_text_validations" '
     {
       name: "Post",
       description: "Writing entry rendered at /writing/[slug].",
@@ -428,7 +469,8 @@ build_post_payload() {
           id: "content",
           name: "Content",
           type: "RichText",
-          required: true
+          required: true,
+          validations: $richTextValidations
         }
       ]
     }
