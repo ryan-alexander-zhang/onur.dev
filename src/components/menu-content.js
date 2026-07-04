@@ -1,7 +1,7 @@
 'use client'
 
 import NextLink from 'next/link'
-import { FaGithub as GithubIcon, FaGlobe as GlobeIcon } from 'react-icons/fa'
+import { FaGithub as GithubIcon, FaGlobe as GlobeIcon, FaWeixin as WechatIcon } from 'react-icons/fa'
 import { FaXTwitter as XIcon } from 'react-icons/fa6'
 
 import { useGithubProfile } from '@/components/github-profile-provider'
@@ -16,6 +16,8 @@ function getProfileIcon(iconKey) {
       return <GlobeIcon size={16} />
     case 'twitter':
       return <XIcon size={16} />
+    case 'wechat':
+      return <WechatIcon size={16} />
     default:
       return <GlobeIcon size={16} />
   }

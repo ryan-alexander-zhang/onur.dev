@@ -28,7 +28,11 @@ const FALLBACK_GITHUB_PROFILE = {
   profileUrl: GITHUB_PROFILE_URL,
   websiteUrl: '',
   twitterUsername: '',
-  onlineLinks: [{ title: 'GitHub', url: GITHUB_PROFILE_URL, iconKey: 'github' }]
+  onlineLinks: getOnlineLinks({
+    profileUrl: GITHUB_PROFILE_URL,
+    websiteUrl: '',
+    twitterUsername: ''
+  })
 }
 
 function getGithubHeaders(accept) {
@@ -69,7 +73,8 @@ function getOnlineLinks({ profileUrl, websiteUrl, twitterUsername }) {
   return [
     { title: 'GitHub', url: profileUrl, iconKey: 'github' },
     ...(websiteUrl ? [{ title: 'Eng Copilot', url: websiteUrl, iconKey: 'website' }] : []),
-    ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : [])
+    ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : []),
+    { title: 'WeChat', url: '/wechat', iconKey: 'wechat' }
   ]
 }
 
