@@ -206,6 +206,12 @@ contentful_locale: en-US
 - 正式发布时一并 publish 关联 entry / asset
 - 回写 `contentful_entry_id`、`contentful_seo_entry_id`、最后同步时间
 
+补充说明：
+
+- 正文里的本地图片会继续上传到 Contentful Asset
+- 正文里的远程 Markdown 图片会保留原始 URL，不再导入为 Contentful Asset
+- `journal/logbook` 的 `images` 字段和 `contentful-carousel` 里的图片仍然会同步成 Contentful Asset
+
 ### Journal / Logbook
 
 脚本会同步：

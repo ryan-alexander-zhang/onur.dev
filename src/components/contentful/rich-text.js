@@ -10,6 +10,62 @@ import { createHeadingId, getRichTextPlainText } from '@/lib/contentful-rich-tex
 const TweetCard = dynamic(() => import('@/components/tweet-card/tweet-card').then((mod) => mod.TweetCard))
 const CodeBlock = dynamic(() => import('@/components/contentful/code-block').then((mod) => mod.CodeBlock))
 const DynamicIframe = dynamic(() => import('@/components/contentful/iframe').then((mod) => mod.Iframe))
+const EXTERNAL_IMAGE_SENTINEL = '\u200B'
+
+function renderImageFigure({ src, alt, caption, height, width, loading = 'lazy' }) {
+  return (
+    <figure className="mb-6 flex flex-col gap-2 overflow-hidden rounded-xl">
+      <img
+        src={src}
+        width={width || 400}
+        height={height || 300}
+        alt={alt}
+        loading={loading}
+        className="animate-reveal"
+        nopin="nopin"
+      />
+      {caption && <figcaption className="text-center text-xs font-light break-all text-gray-500">{caption}</figcaption>}
+    </figure>
+  )
+}
+
+function getExternalImageData(node) {
+  const [sentinelNode, hyperlinkNode, ...remainingNodes] = node?.content ?? []
+
+  if (sentinelNode?.nodeType !== 'text' || sentinelNode.value !== EXTERNAL_IMAGE_SENTINEL) {
+    return null
+  }
+
+  if (hyperlinkNode?.nodeType !== INLINES.HYPERLINK) {
+    return null
+  }
+
+  const hasTrailingContent = remainingNodes.some((childNode) => {
+    if (childNode.nodeType !== 'text') {
+      return true
+    }
+
+    return childNode.value.trim() !== ''
+  })
+
+  if (hasTrailingContent) {
+    return null
+  }
+
+  const src = hyperlinkNode.data?.uri
+  if (!src) {
+    return null
+  }
+
+  const title = node.data?.externalImage?.title?.trim() || getRichTextPlainText(hyperlinkNode).trim()
+  const description = node.data?.externalImage?.description?.trim() || ''
+
+  return {
+    alt: description || title,
+    caption: description,
+    src
+  }
+}
 
 function options(links) {
   const findAsset = (id) => links?.assets.block.find((item) => item.sys.id === id)
@@ -42,9 +98,14 @@ function options(links) {
       [BLOCKS.HEADING_2]: (node, children) => renderHeading(node, children, 'h2'),
       [BLOCKS.HEADING_3]: (node, children) => renderHeading(node, children, 'h3'),
       // Must be a <div> instead of <p> to avoid descendant issue, hence to avoid mismatching UI between server and client on hydration.
-      [BLOCKS.PARAGRAPH]: (_, children) => (
-        <div className="mb-4 leading-[1.75] last:mb-0 [&:has(+ul)]:mb-1">{children}</div>
-      ),
+      [BLOCKS.PARAGRAPH]: (node, children) => {
+        const externalImage = getExternalImageData(node)
+        if (externalImage) {
+          return renderImageFigure(externalImage)
+        }
+
+        return <div className="mb-4 leading-[1.75] last:mb-0 [&:has(+ul)]:mb-1">{children}</div>
+      },
       [BLOCKS.UL_LIST]: (_, children) => <ul className="mb-4 flex list-disc flex-col gap-0.5 pl-6">{children}</ul>,
       [BLOCKS.OL_LIST]: (_, children) => (
         <ol className="mb-4 flex list-inside list-[decimal-leading-zero] flex-col gap-2">{children}</ol>
@@ -88,25 +149,14 @@ function options(links) {
         if (!asset) return null
         const isEagerLoading = asset.contentfulMetadata?.tags?.some((tag) => tag.name === 'Eager Loading')
 
-        return (
-          <figure className="mb-6 flex flex-col gap-2 overflow-hidden rounded-xl">
-            <img
-              src={asset.url}
-              width={asset.width || 400}
-              height={asset.height || 300}
-              alt={asset.description || asset.title}
-              loading={isEagerLoading ? 'eager' : 'lazy'}
-              className="animate-reveal"
-              // eslint-disable-next-line react/no-unknown-property
-              nopin="nopin"
-            />
-            {asset.description && (
-              <figcaption className="text-center text-xs font-light break-all text-gray-500">
-                {asset.description}
-              </figcaption>
-            )}
-          </figure>
-        )
+        return renderImageFigure({
+          alt: asset.description || asset.title,
+          caption: asset.description,
+          height: asset.height,
+          loading: isEagerLoading ? 'eager' : 'lazy',
+          src: asset.url,
+          width: asset.width
+        })
       },
       [BLOCKS.HR]: () => <hr className="my-12" />,
       [INLINES.HYPERLINK]: (node, children) => <Link href={node.data.uri}>{children}</Link>,

@@ -6,6 +6,7 @@ const DEFAULT_UPLOAD_BASE_URL = 'https://upload.contentful.com'
 const DEFAULT_LOCALE = 'en-US'
 const FRONTMATTER_REGEX = /^---\n[\s\S]*?\n---\n?/
 const CONTENTFUL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const EXTERNAL_IMAGE_SENTINEL = '\u200B'
 
 const CONTENT_TYPES = {
   PAGE: 'page',
@@ -383,6 +384,12 @@ async function markdownToRichText(markdown, context) {
 
     const imageMatch = matchImageLine(trimmed)
     if (imageMatch) {
+      if (isRemoteImageSource(imageMatch.source)) {
+        content.push(createExternalImageParagraph(imageMatch))
+        index += 1
+        continue
+      }
+
       const asset = await upsertAssetFromSource(context, {
         source: imageMatch.source,
         title: imageMatch.title || context.note.title,
@@ -535,7 +542,7 @@ async function upsertAssetFromSource(context, options) {
     throw new Error('Asset source is required')
   }
 
-  const isRemote = /^https?:\/\//i.test(source)
+  const isRemote = isRemoteImageSource(source)
   const identity = isRemote ? source : (resolveVaultFile(context.app, context.file, source)?.path ?? source)
   const assetId = buildStableId('asset', identity)
   const title = String(options.title || guessAssetTitle(source)).trim() || guessAssetTitle(source)
@@ -1849,6 +1856,36 @@ function createEmbeddedEntryParagraph(entryId) {
   }
 }
 
+function createExternalImageParagraph(imageMatch) {
+  const title = readString(imageMatch.title) || guessAssetTitle(imageMatch.source)
+  const description = readString(imageMatch.description)
+
+  return {
+    nodeType: 'paragraph',
+    data: {
+      externalImage: {
+        description,
+        title
+      }
+    },
+    content: [
+      {
+        nodeType: 'text',
+        value: EXTERNAL_IMAGE_SENTINEL,
+        marks: [],
+        data: {}
+      },
+      {
+        nodeType: 'hyperlink',
+        data: {
+          uri: imageMatch.source
+        },
+        content: parseMarkedText(title)
+      }
+    ]
+  }
+}
+
 function createEmbeddedAssetBlock(assetId) {
   return {
     nodeType: 'embedded-asset-block',
@@ -1887,13 +1924,17 @@ function resolveVaultFile(app, noteFile, source) {
 }
 
 function guessAssetFileName(source) {
-  if (/^https?:\/\//i.test(source)) {
+  if (isRemoteImageSource(source)) {
     const url = new URL(source)
     const fileName = path.posix.basename(url.pathname)
     return fileName || 'asset'
   }
 
   return path.posix.basename(source)
+}
+
+function isRemoteImageSource(source) {
+  return /^https?:\/\//i.test(String(source || ''))
 }
 
 function guessAssetTitle(source) {
