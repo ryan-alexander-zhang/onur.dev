@@ -1,4 +1,8 @@
 import '@/globals.css'
+import 'yet-another-react-lightbox/styles.css'
+import 'yet-another-react-lightbox/plugins/captions.css'
+import 'yet-another-react-lightbox/plugins/counter.css'
+import 'yet-another-react-lightbox/plugins/thumbnails.css'
 
 import { GeistMono } from 'geist/font/mono'
 import { GeistSans } from 'geist/font/sans'

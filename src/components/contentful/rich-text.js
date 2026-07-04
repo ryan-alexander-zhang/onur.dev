@@ -5,29 +5,13 @@ import dynamic from 'next/dynamic'
 import { Link } from '@/components/link'
 import { ShowInView } from '@/components/show-in-view'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ZoomableImage } from '@/components/ui/zoomable-image'
 import { createHeadingId, getRichTextPlainText } from '@/lib/contentful-rich-text'
 
 const TweetCard = dynamic(() => import('@/components/tweet-card/tweet-card').then((mod) => mod.TweetCard))
 const CodeBlock = dynamic(() => import('@/components/contentful/code-block').then((mod) => mod.CodeBlock))
 const DynamicIframe = dynamic(() => import('@/components/contentful/iframe').then((mod) => mod.Iframe))
 const EXTERNAL_IMAGE_SENTINEL = '\u200B'
-
-function renderImageFigure({ src, alt, caption, height, width, loading = 'lazy' }) {
-  return (
-    <figure className="mb-6 flex flex-col gap-2 overflow-hidden rounded-xl">
-      <img
-        src={src}
-        width={width || 400}
-        height={height || 300}
-        alt={alt}
-        loading={loading}
-        className="animate-reveal"
-        nopin="nopin"
-      />
-      {caption && <figcaption className="text-center text-xs font-light break-all text-gray-500">{caption}</figcaption>}
-    </figure>
-  )
-}
 
 function getExternalImageData(node) {
   const [sentinelNode, hyperlinkNode, ...remainingNodes] = node?.content ?? []
@@ -63,6 +47,7 @@ function getExternalImageData(node) {
   return {
     alt: description || title,
     caption: description,
+    title,
     src
   }
 }
@@ -101,7 +86,7 @@ function options(links) {
       [BLOCKS.PARAGRAPH]: (node, children) => {
         const externalImage = getExternalImageData(node)
         if (externalImage) {
-          return renderImageFigure(externalImage)
+          return <ZoomableImage {...externalImage} />
         }
 
         return <div className="mb-4 leading-[1.75] last:mb-0 [&:has(+ul)]:mb-1">{children}</div>
@@ -149,14 +134,17 @@ function options(links) {
         if (!asset) return null
         const isEagerLoading = asset.contentfulMetadata?.tags?.some((tag) => tag.name === 'Eager Loading')
 
-        return renderImageFigure({
-          alt: asset.description || asset.title,
-          caption: asset.description,
-          height: asset.height,
-          loading: isEagerLoading ? 'eager' : 'lazy',
-          src: asset.url,
-          width: asset.width
-        })
+        return (
+          <ZoomableImage
+            alt={asset.description || asset.title}
+            caption={asset.description}
+            height={asset.height}
+            loading={isEagerLoading ? 'eager' : 'lazy'}
+            src={asset.url}
+            title={asset.title}
+            width={asset.width}
+          />
+        )
       },
       [BLOCKS.HR]: () => <hr className="my-12" />,
       [INLINES.HYPERLINK]: (node, children) => <Link href={node.data.uri}>{children}</Link>,

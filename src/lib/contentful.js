@@ -120,6 +120,8 @@ export const getPost = cache(async (slug, preview = isDevelopment) => {
                             format: AVIF,
                             quality: 50
                           })
+                          width
+                          height
                         }
                       }
                     }

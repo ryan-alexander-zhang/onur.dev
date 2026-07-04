@@ -2,6 +2,7 @@ import Markdown from 'markdown-to-jsx'
 
 import { Link } from '@/components/link'
 import { TweetCard } from '@/components/tweet-card/tweet-card'
+import { ZoomableImage } from '@/components/ui/zoomable-image'
 
 const resolveMarkdownUrl = (url, baseUrl) => {
   if (!url) return url
@@ -21,17 +22,16 @@ export const MarkdownRenderer = ({ imageBaseUrl, linkBaseUrl, options, ...rest }
     a: ({ className, href, ...anchorProps }) => <Link href={resolveMarkdownUrl(href, linkBaseUrl)} {...anchorProps} />,
     p: ({ children }) => <p className="mb-2 text-sm">{children}</p>,
     img: ({ alt, src }) => (
-      <span className="mt-2 block overflow-hidden rounded-xl border">
-        <img
-          alt={alt}
-          src={resolveMarkdownUrl(src, imageBaseUrl ?? linkBaseUrl)}
-          width={400}
-          height={300}
-          loading="lazy"
-          className="animate-reveal aspect-auto w-full object-cover"
-          nopin="nopin"
-        />
-      </span>
+      <ZoomableImage
+        alt={alt}
+        className="mt-2 mb-0"
+        frameClassName="block"
+        imageClassName="aspect-auto object-cover"
+        src={resolveMarkdownUrl(src, imageBaseUrl ?? linkBaseUrl)}
+        width={400}
+        height={300}
+        loading="lazy"
+      />
     ),
     tweet: ({ id }) => <TweetCard id={id} className="mt-2" />
   }
