@@ -1,81 +1,41 @@
-import { fixupConfigRules, fixupPluginRules } from '@eslint/compat'
-import { FlatCompat } from '@eslint/eslintrc'
-import eslint from '@eslint/js'
-import _import from 'eslint-plugin-import'
-import prettier from 'eslint-plugin-prettier'
-import react from 'eslint-plugin-react'
+import nextVitals from 'eslint-config-next/core-web-vitals'
+import prettierRecommended from 'eslint-plugin-prettier/recommended'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
-import globals from 'globals'
-import path from 'path'
-import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: eslint.configs.recommended,
-  allConfig: eslint.configs.all
-})
-
-const patchedConfig = [
-  ...fixupConfigRules(
-    compat.extends(
-      'next',
-      'next/core-web-vitals',
-      'eslint:recommended',
-      'plugin:react/recommended',
-      'plugin:prettier/recommended',
-      'plugin:import/recommended'
-    )
-  ),
+const config = [
+  ...nextVitals,
+  prettierRecommended,
   {
-    files: ['**/*.js?(x)'],
+    files: ['**/*.{js,jsx,mjs}'],
     plugins: {
-      react: fixupPluginRules(react),
-      'simple-import-sort': simpleImportSort,
-      import: fixupPluginRules(_import),
-      prettier: fixupPluginRules(prettier)
-    },
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.commonjs,
-        ...globals.node
-      },
-      ecmaVersion: 6,
-      sourceType: 'module',
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true
-        }
-      }
+      'simple-import-sort': simpleImportSort
     },
     settings: {
-      react: {
-        version: 'detect'
+      next: {
+        rootDir: '.'
       },
       'import/resolver': {
         node: {
-          extensions: ['.js', '.jsx'],
+          extensions: ['.js', '.jsx', '.mjs'],
           paths: ['src']
         },
         alias: {
           map: [['@', './src']],
-          extensions: ['.js', '.jsx']
+          extensions: ['.js', '.jsx', '.mjs']
         }
       }
     },
     rules: {
       'no-console': ['error', { allow: ['error', 'info'] }],
-      'react/no-unescaped-entities': 0,
-      'react/react-in-jsx-scope': 'off',
-      'react/prop-types': 0,
+      'react/no-unescaped-entities': 'off',
+      'react/prop-types': 'off',
+      'react-hooks/set-state-in-effect': 'off',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
       'import/newline-after-import': 'error',
       'import/no-duplicates': 'error',
-      '@next/next/no-img-element': 0,
-      'import/no-named-as-default': 0
+      '@next/next/no-img-element': 'off',
+      'import/no-named-as-default': 'off'
     }
   },
   {
@@ -85,7 +45,5 @@ const patchedConfig = [
     }
   }
 ]
-
-const config = [...patchedConfig, { ignores: ['.next/*'] }]
 
 export default config

@@ -18,8 +18,6 @@ const resolveMarkdownUrl = (url, baseUrl) => {
 
 export const MarkdownRenderer = ({ imageBaseUrl, linkBaseUrl, options, ...rest }) => {
   const defaultOverrides = {
-    // Extract `className` prop to make Link component work properly
-    // eslint-disable-next-line no-unused-vars
     a: ({ className, href, ...anchorProps }) => <Link href={resolveMarkdownUrl(href, linkBaseUrl)} {...anchorProps} />,
     p: ({ children }) => <p className="mb-2 text-sm">{children}</p>,
     img: ({ alt, src }) => (
@@ -31,7 +29,6 @@ export const MarkdownRenderer = ({ imageBaseUrl, linkBaseUrl, options, ...rest }
           height={300}
           loading="lazy"
           className="animate-reveal aspect-auto w-full object-cover"
-          // eslint-disable-next-line react/no-unknown-property
           nopin="nopin"
         />
       </span>

@@ -29,7 +29,6 @@ export const JourneyCard = memo(({ title, description, imagesCollection }) => {
             height={imagesCollection?.items[0]?.height}
             loading="lazy"
             className="animate-reveal"
-            // eslint-disable-next-line react/no-unknown-property
             nopin="nopin"
           />
         </div>

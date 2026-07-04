@@ -60,7 +60,6 @@ export function Carousel({ images = [] }) {
                   height={imageItem.height}
                   loading="lazy"
                   className="aspect-square border-none object-cover"
-                  // eslint-disable-next-line react/no-unknown-property
                   nopin="nopin"
                 />
               </CardContent>

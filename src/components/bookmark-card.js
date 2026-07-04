@@ -32,7 +32,6 @@ export const BookmarkCard = ({ bookmark, order }) => {
             e.target.onerror = null
             e.target.src = '/assets/fallback.avif'
           }}
-          // eslint-disable-next-line react/no-unknown-property
           nopin="nopin"
         />
       </span>

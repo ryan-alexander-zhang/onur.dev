@@ -32,7 +32,6 @@ export default async function RootLayout({ children }) {
     >
       <body suppressHydrationWarning>
         <GithubProfileProvider profile={githubProfile}>
-          {/* eslint-disable-next-line react/no-unknown-property */}
           <main vaul-drawer-wrapper="" className="min-h-screen bg-white">
             {isEnabled && (
               <div className="absolute inset-x-0 bottom-0 z-50 flex h-12 w-full items-center justify-center bg-green-500 text-center text-sm font-medium text-white">

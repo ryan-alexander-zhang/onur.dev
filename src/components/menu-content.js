@@ -36,7 +36,6 @@ export const MenuContent = () => {
             height={40}
             loading="lazy"
             className="rounded-full border shadow-xs"
-            // eslint-disable-next-line react/no-unknown-property
             nopin="nopin"
           />
           <div className="flex flex-col">
