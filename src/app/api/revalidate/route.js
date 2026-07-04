@@ -83,6 +83,7 @@ export async function POST(request) {
       if (slug) {
         revalidatePath(`/writing/${slug}`)
         revalidatePath('/writing')
+        revalidatePath('/writing', 'layout')
       } else {
         return jsonWithCors(
           request,
