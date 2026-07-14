@@ -5,6 +5,8 @@ import { cacheLife } from 'next/cache'
 const PROFILE_OWNER = 'ryan-alexander-zhang'
 const PROFILE_REPOSITORY = 'ryan-alexander-zhang/ryan-alexander-zhang'
 const PROFILE_BRANCH = 'main'
+const PRODUCT_NAME = 'Lingo Mark'
+const PRODUCT_URL = 'https://www.lingomark.app'
 const GITHUB_PROFILE_URL = `https://github.com/${PROFILE_OWNER}`
 const GITHUB_USER_API_URL = `https://api.github.com/users/${PROFILE_OWNER}`
 const README_URL = `https://raw.githubusercontent.com/${PROFILE_REPOSITORY}/${PROFILE_BRANCH}/README.md`
@@ -26,11 +28,10 @@ const FALLBACK_GITHUB_PROFILE = {
   bio: 'A passionate backend developer from China',
   avatarUrl: `https://avatars.githubusercontent.com/${PROFILE_OWNER}`,
   profileUrl: GITHUB_PROFILE_URL,
-  websiteUrl: '',
+  websiteUrl: PRODUCT_URL,
   twitterUsername: '',
   onlineLinks: getOnlineLinks({
     profileUrl: GITHUB_PROFILE_URL,
-    websiteUrl: '',
     twitterUsername: ''
   })
 }
@@ -69,10 +70,10 @@ function ensureAbsoluteUrl(url) {
   return `https://${url}`
 }
 
-function getOnlineLinks({ profileUrl, websiteUrl, twitterUsername }) {
+function getOnlineLinks({ profileUrl, twitterUsername }) {
   return [
     { title: 'GitHub', url: profileUrl, iconKey: 'github' },
-    ...(websiteUrl ? [{ title: 'Eng Copilot', url: websiteUrl, iconKey: 'website' }] : []),
+    { title: PRODUCT_NAME, url: PRODUCT_URL, iconKey: 'website' },
     ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : []),
     { title: 'WeChat', url: '/wechat', iconKey: 'wechat' }
   ]
@@ -113,7 +114,7 @@ export async function getGithubProfile() {
   try {
     const profile = await fetchGithubProfile()
     const profileUrl = profile?.html_url || FALLBACK_GITHUB_PROFILE.profileUrl
-    const websiteUrl = ensureAbsoluteUrl(profile?.blog)
+    const websiteUrl = ensureAbsoluteUrl(profile?.blog) || PRODUCT_URL
     const twitterUsername = profile?.twitter_username || ''
 
     return {
@@ -123,7 +124,7 @@ export async function getGithubProfile() {
       profileUrl,
       websiteUrl,
       twitterUsername,
-      onlineLinks: getOnlineLinks({ profileUrl, websiteUrl, twitterUsername })
+      onlineLinks: getOnlineLinks({ profileUrl, twitterUsername })
     }
   } catch (error) {
     console.error('Failed to load GitHub profile data:', error)

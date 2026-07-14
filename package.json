@@ -3,7 +3,7 @@
   "description": "Ryan Alexander Zhang's personal website.",
   "author": {
     "name": "Ryan Alexander Zhang",
-    "url": "https://eng-copilot-roan.vercel.app/"
+    "url": "https://www.lingomark.app/"
   },
   "scripts": {
     "dev": "next dev",

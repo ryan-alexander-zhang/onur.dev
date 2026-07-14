@@ -4,7 +4,7 @@ import { cacheLife } from 'next/cache'
 
 import { getGithubProfile } from '@/lib/github'
 
-const FALLBACK_SITE_URL = 'https://github.com/ryan-alexander-zhang'
+const DEFAULT_SITE_URL = 'https://www.lingomark.app'
 
 export const OG_IMAGE = {
   width: 1200,
@@ -13,7 +13,7 @@ export const OG_IMAGE = {
 }
 
 function normalizeSiteBaseUrl(url) {
-  const parsedUrl = new URL(url || FALLBACK_SITE_URL)
+  const parsedUrl = new URL(url || DEFAULT_SITE_URL)
 
   parsedUrl.hash = ''
   parsedUrl.search = ''
@@ -51,7 +51,7 @@ export async function getSiteMetadata() {
   cacheLife('hours')
 
   const profile = await getGithubProfile()
-  const siteBaseUrl = normalizeSiteBaseUrl(profile.websiteUrl || profile.profileUrl || FALLBACK_SITE_URL)
+  const siteBaseUrl = normalizeSiteBaseUrl(DEFAULT_SITE_URL)
   const siteUrl = buildAbsoluteUrl(siteBaseUrl)
   const title = profile.name || 'Personal Website'
   const description = profile.bio || 'Personal website'
