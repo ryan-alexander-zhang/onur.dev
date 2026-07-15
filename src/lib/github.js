@@ -74,8 +74,7 @@ function getOnlineLinks({ profileUrl, twitterUsername }) {
   return [
     { title: 'GitHub', url: profileUrl, iconKey: 'github' },
     { title: PRODUCT_NAME, url: PRODUCT_URL, iconKey: 'website' },
-    ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : []),
-    { title: 'WeChat', url: '/wechat', iconKey: 'wechat' }
+    ...(twitterUsername ? [{ title: 'X (Twitter)', url: `https://x.com/${twitterUsername}`, iconKey: 'twitter' }] : [])
   ]
 }
 
