@@ -18,20 +18,16 @@ const SubmitBookmarkDialog = dynamic(
 )
 
 import { useKeyPress } from '@/hooks/useKeyPress'
+import { LINKS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-const keyCodePathnameMapping = {
-  Digit1: '/',
-  Digit2: '/writing',
-  Digit3: '/journey',
-  Digit4: '/stack',
-  Digit5: '/bookmarks'
-}
+const keyCodePathnameMapping = Object.fromEntries(LINKS.map((link, index) => [`Digit${index + 1}`, link.href]))
+const navigationKeyCodes = Object.keys(keyCodePathnameMapping)
 
 export const SideMenu = ({ children, title, bookmarks = [], isInner }) => {
   const router = useRouter()
   const pathname = usePathname()
-  useKeyPress(onKeyPress, Object.keys(keyCodePathnameMapping))
+  useKeyPress(onKeyPress, navigationKeyCodes)
 
   function onKeyPress(event) {
     const key = event.code

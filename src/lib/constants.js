@@ -1,5 +1,6 @@
 import {
   LuBookmark as BookmarkIcon,
+  LuLayers as LayersIcon,
   LuNavigation as NavigationIcon,
   LuPencilLine as PencilLineIcon,
   LuSparkles as SparklesIcon,
@@ -18,6 +19,11 @@ export const LINKS = [
     href: '/writing',
     label: 'Writing',
     icon: <PencilLineIcon size={16} />
+  },
+  {
+    href: '/cards',
+    label: 'Cards',
+    icon: <LayersIcon size={16} />
   },
   {
     href: '/journey',
@@ -47,5 +53,6 @@ export const SUBMIT_BOOKMARK_FORM_DESCRIPTION =
 export const CONTENT_TYPES = {
   PAGE: 'page',
   POST: 'post',
-  LOGBOOK: 'logbook'
+  LOGBOOK: 'logbook',
+  PERMANENT_NOTE: 'permanentNote'
 }

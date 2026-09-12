@@ -1,8 +1,9 @@
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { CONTENT_TYPES } from '@/lib/constants'
+import { PERMANENT_NOTES_CACHE_TAG } from '@/lib/permanent-notes-data'
 
-const secret = `${process.env.NEXT_REVALIDATE_SECRET}`
+const secret = process.env.NEXT_REVALIDATE_SECRET
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -45,11 +46,9 @@ export async function OPTIONS(request) {
 }
 
 export async function POST(request) {
-  const payload = await request.json()
-
   const requestHeaders = new Headers(request.headers)
   const revalidateSecret = requestHeaders.get('x-revalidate-secret')
-  if (revalidateSecret !== secret) {
+  if (!secret || revalidateSecret !== secret) {
     return jsonWithCors(
       request,
       {
@@ -59,6 +58,16 @@ export async function POST(request) {
       },
       { status: 401 }
     )
+  }
+
+  let payload
+  try {
+    payload = await request.json()
+  } catch {
+    return jsonWithCors(request, { revalidated: false, message: 'Invalid JSON payload' }, { status: 400 })
+  }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return jsonWithCors(request, { revalidated: false, message: 'Invalid payload' }, { status: 400 })
   }
 
   const { contentTypeId, slug } = payload
@@ -95,6 +104,12 @@ export async function POST(request) {
           { status: 400 }
         )
       }
+      break
+    case CONTENT_TYPES.PERMANENT_NOTE:
+      revalidateTag(PERMANENT_NOTES_CACHE_TAG, { expire: 0 })
+      revalidatePath('/cards')
+      revalidatePath('/cards', 'layout')
+      revalidatePath('/sitemap.xml')
       break
     case CONTENT_TYPES.LOGBOOK:
       revalidatePath('/journey')

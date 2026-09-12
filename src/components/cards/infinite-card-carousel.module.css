@@ -1,0 +1,125 @@
+.carousel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  perspective: 1200px;
+  touch-action: pan-y;
+  outline-offset: -4px;
+}
+.slot {
+  position: absolute;
+  left: calc(50% - var(--carousel-card-width, 400px) / 2);
+  top: max(24px, calc((100% - 630px) / 2));
+  width: var(--carousel-card-width, 400px);
+  height: min(630px, calc(100% - 55px));
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.reader {
+  height: 100%;
+  min-height: 0;
+}
+.preview {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 27px;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 12px;
+  color: var(--color-gray-900);
+  text-align: left;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
+  cursor: grab;
+  overflow: hidden;
+}
+.previewId {
+  display: block;
+  padding-bottom: 19px;
+  border-bottom: 1px solid var(--color-gray-100);
+  color: var(--color-gray-400);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+}
+.preview strong {
+  display: block;
+  font-weight: 550;
+  font-size: 24px;
+  line-height: 1.65;
+  margin: 24px 0 19px;
+  overflow-wrap: anywhere;
+}
+.previewBody {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 8;
+  overflow: hidden;
+  color: var(--color-gray-500);
+  font-size: 15px;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.previewTag {
+  display: block;
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 11px;
+  color: var(--color-gray-400);
+}
+.controls {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 27px;
+  height: 59px;
+  margin-bottom: 10px;
+}
+.controls > span {
+  min-width: 50px;
+  text-align: center;
+  font-size: 12px;
+  font-family: var(--font-geist-mono), monospace;
+  color: var(--color-gray-900);
+}
+.controls > span > span {
+  color: var(--color-gray-400);
+}
+.empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  color: var(--color-gray-500);
+  font-size: 14px;
+}
+@media (max-width: 640px) {
+  .slot {
+    top: 16px;
+    height: calc(100% - 36px);
+  }
+  .controls {
+    height: 47px;
+    margin-bottom: 3px;
+  }
+  .preview {
+    padding: 20px;
+  }
+  .preview strong {
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    will-change: auto;
+  }
+}

@@ -9,6 +9,7 @@ const CONTENTFUL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const EXTERNAL_IMAGE_SENTINEL = '\u200B'
 
 const CONTENT_TYPES = {
+  PERMANENT_NOTE: 'permanentNote',
   PAGE: 'page',
   POST: 'post',
   LOGBOOK: 'logbook',
@@ -20,6 +21,8 @@ const CONTENT_TYPES = {
 }
 
 const CONTENT_TYPE_ALIASES = {
+  'permanent-note': CONTENT_TYPES.PERMANENT_NOTE,
+  permanentnote: CONTENT_TYPES.PERMANENT_NOTE,
   article: CONTENT_TYPES.POST,
   journal: CONTENT_TYPES.LOGBOOK,
   journey: CONTENT_TYPES.LOGBOOK,
@@ -44,7 +47,12 @@ const MIME_TYPES = {
 }
 
 module.exports = {
-  createQuickAddModule
+  createQuickAddModule,
+  normalizeNote,
+  normalizePermanentLinks,
+  splitPermanentSections,
+  syncNoteToContentful,
+  triggerRevalidation
 }
 
 function createQuickAddModule(mode) {
@@ -182,6 +190,7 @@ async function syncCurrentNote(params, settings, mode) {
     ].join(' | ')
 
     if (config.showNotice) {
+      if (syncResult.warnings?.length) new obsidian.Notice(syncResult.warnings.join('\n'), 15000)
       new obsidian.Notice(summary, revalidateError ? 12000 : 9000)
       if (revalidateError) {
         new obsidian.Notice(`Revalidation failed: ${revalidateError}`, 12000)
@@ -195,7 +204,8 @@ async function syncCurrentNote(params, settings, mode) {
       revalidated,
       revalidateError: revalidateError || null,
       file: activeFile.path,
-      summary
+      summary,
+      warnings: syncResult.warnings || []
     }
   } catch (error) {
     if (fallbackShowNotice) {
@@ -208,6 +218,8 @@ async function syncCurrentNote(params, settings, mode) {
 
 async function syncNoteToContentful(context) {
   switch (context.note.contentType) {
+    case CONTENT_TYPES.PERMANENT_NOTE:
+      return syncPermanentNote(context)
     case CONTENT_TYPES.POST:
     case CONTENT_TYPES.PAGE:
       return syncRichContentNote(context)
@@ -603,6 +615,30 @@ function normalizeNote(file, rawMarkdown, frontmatter, defaultLocale) {
   const title = readRequiredString(frontmatter.title || extractFirstHeading(rawMarkdown), 'title')
   const locale = readString(frontmatter.contentful_locale) || defaultLocale
 
+  if (contentType === CONTENT_TYPES.PERMANENT_NOTE) {
+    const noteId = permanentNoteId(frontmatter.id)
+    const entryId = `permanentNote_${noteId}`
+    if (frontmatter.contentful_note_id && String(frontmatter.contentful_note_id) !== noteId) {
+      throw new Error('Permanent note id is immutable after sync; restore the original id')
+    }
+    if (frontmatter.contentful_entry_id && frontmatter.contentful_entry_id !== entryId) {
+      throw new Error('Permanent note entry ID must match its immutable note id')
+    }
+    const sections = splitPermanentSections(bodyMarkdown)
+    if (!sections.bodyZh.trim()) throw new Error('Permanent note Chinese body is required')
+    return {
+      ...sections,
+      contentType,
+      noteId,
+      entryId,
+      locale,
+      title,
+      titleEn: readString(frontmatter.title_en),
+      tags: readStringArray(frontmatter.tags),
+      aliases: readStringArray(frontmatter.aliases)
+    }
+  }
+
   if (contentType === CONTENT_TYPES.LOGBOOK) {
     const entryId = readString(frontmatter.contentful_entry_id) || buildStableId(contentType, file.path)
     const description =
@@ -661,7 +697,9 @@ function normalizeContentType(value) {
 
   const resolved = CONTENT_TYPE_ALIASES[normalized]
   if (!resolved) {
-    throw new Error('contentful_content_type must be one of: writing, post, page, journal, journey, logbook')
+    throw new Error(
+      'contentful_content_type must be one of: writing, post, page, journal, journey, logbook, permanent-note'
+    )
   }
 
   return resolved
@@ -946,6 +984,8 @@ async function triggerRevalidation(config, note) {
   const payload = {
     contentTypeId: note.contentType
   }
+
+  if (note.noteId) payload.noteId = note.noteId
 
   if (note.slug) {
     payload.slug = note.slug
@@ -2011,4 +2051,168 @@ function sleep(ms) {
   })
 }
 
+function permanentNoteId(value) {
+  if (typeof value === 'number' && !Number.isSafeInteger(value)) {
+    throw new Error('Permanent note id must be an exact integer; quote long IDs in YAML')
+  }
+  const id = String(value ?? '').trim()
+  if (!/^\d{14}$/.test(id)) throw new Error('Permanent note id must be a 14-digit timestamp')
+  return id
+}
+
+// Preserve code literally, including fenced blocks, indented code and multiline code spans.
+function protectPermanentCode(markdown) {
+  const tokens = []
+  const save = (value) => {
+    const key = `\u0000CODE${tokens.length}\u0000`
+    tokens.push(value)
+    return key
+  }
+  let fence = null
+  let block = []
+  const lines = []
+  for (const line of markdown.split('\n')) {
+    const match = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
+    if (fence) {
+      block.push(line)
+      if (match && match[1][0] === fence[0] && match[1].length >= fence.length && !match[2].trim()) {
+        lines.push(save(block.join('\n')))
+        fence = null
+        block = []
+      }
+    } else if (match) {
+      fence = match[1]
+      block = [line]
+    } else {
+      lines.push(/^(?: {4}|\t)/.test(line) ? save(line) : line)
+    }
+  }
+  if (block.length) lines.push(save(block.join('\n')))
+  const text = lines.join('\n').replace(/(`+)([\s\S]*?)\1(?!`)/g, save)
+  return { text, restore: (value) => value.replace(/\u0000CODE(\d+)\u0000/g, (_, index) => tokens[Number(index)]) }
+}
+
+function splitPermanentSections(markdown) {
+  const protectedCode = protectPermanentCode(markdown)
+  const sections = { bodyZh: [], bodyEn: [], sources: [] }
+  let section = 'bodyZh'
+  for (const line of protectedCode.text.split('\n')) {
+    if (/^##\s+English\s*#*\s*$/i.test(line)) section = 'bodyEn'
+    else if (/^##\s+(?:来源|Sources)\s*#*\s*$/i.test(line)) section = 'sources'
+    else sections[section].push(line)
+  }
+  return Object.fromEntries(
+    Object.entries(sections).map(([key, lines]) => [key, protectedCode.restore(lines.join('\n')).trim()])
+  )
+}
+
+function resolvePermanentTarget(app, file, target) {
+  const cache = app.metadataCache
+  let resolved = cache.getFirstLinkpathDest(target, file.path)
+  if (resolved) return { file: resolved, frontmatter: cache.getFileCache(resolved)?.frontmatter }
+  // Alias fallback examines Obsidian's existing metadata only, never other note contents.
+  const matches = (cache.getCachedFiles?.() || []).filter((candidate) => {
+    const fm = cache.getCache(candidate)?.frontmatter
+    return readStringArray(fm?.aliases).includes(target)
+  })
+  if (matches.length !== 1) return null
+  resolved = app.vault.getAbstractFileByPath(matches[0])
+  return resolved ? { file: resolved, frontmatter: cache.getFileCache(resolved)?.frontmatter } : null
+}
+
+function normalizePermanentLinks(markdown, app, file, noteId, collectEdges = true) {
+  const protectedCode = protectPermanentCode(markdown)
+  const linkedNoteIds = new Set()
+  const warnings = new Set()
+  const labelText = (value) => value.replace(/[\\[\]]/g, '\\$&')
+  const normalize = (target, display, image = false) => {
+    if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) return null
+    if (target.startsWith('#')) return image ? labelText(display) : null
+    const publishedCard = target.match(/^\/cards\/(\d{14})(?:[#?].*)?$/)
+    if (publishedCard && !image) {
+      if (collectEdges && publishedCard[1] !== noteId) linkedNoteIds.add(publishedCard[1])
+      return `[${labelText(display || publishedCard[1])}](/cards/${publishedCard[1]})`
+    }
+    try {
+      target = decodeURIComponent(target)
+    } catch {
+      /* Keep malformed paths readable. */
+    }
+    target = target.split('#')[0].replace(/\.md$/i, '')
+    const label = display || target.split('/').pop()
+    if (image) {
+      warnings.add(`Local image/embed omitted: ${label}`)
+      return labelText(label)
+    }
+    const resolved = resolvePermanentTarget(app, file, target)
+    const fm = resolved?.frontmatter
+    let targetId
+    try {
+      if (
+        normalizeContentType(fm?.contentful_content_type ?? fm?.content_type ?? fm?.type) ===
+        CONTENT_TYPES.PERMANENT_NOTE
+      ) {
+        targetId = permanentNoteId(fm.id)
+      }
+    } catch {
+      /* Missing, nonpermanent or invalid target: readable text below. */
+    }
+    if (!targetId) {
+      warnings.add(`Unpublished vault link rendered as text (missing or nonpermanent target): ${label}`)
+      return labelText(label)
+    }
+    if (collectEdges && targetId !== noteId) linkedNoteIds.add(targetId)
+    return `[${labelText(label)}](/cards/${targetId})`
+  }
+  // Escaped markup is literal. External URLs and images remain intact.
+  const text = protectedCode.text.replace(
+    /(?:[a-z][a-z\d+.-]*:\/\/)[^\s<>]+|\\[\s\S]|(!?)\[\[([^\]\n]+)\]\]|(!?)\[([^\]\n]*)\]\(\s*(<[^>\n]+>|[^\s)]+)(?:\s+"[^"\n]*")?\s*\)/g,
+    (whole, wikiImage, wiki, mdImage, mdLabel, mdTarget) => {
+      if (whole.startsWith('\\') || /^(?:[a-z][a-z\d+.-]*:\/\/)/i.test(whole)) return whole
+      if (wiki !== undefined) {
+        const [target, ...labels] = wiki.split('|')
+        return normalize(target, labels.join('|'), Boolean(wikiImage)) ?? whole
+      }
+      return normalize(mdTarget.replace(/^<|>$/g, ''), mdLabel, Boolean(mdImage)) ?? whole
+    }
+  )
+  return { markdown: protectedCode.restore(text), linkedNoteIds: [...linkedNoteIds], warnings: [...warnings] }
+}
+
+async function syncPermanentNote(context) {
+  const { note, app, file, client } = context
+  const zh = normalizePermanentLinks(note.bodyZh, app, file, note.noteId)
+  const en = normalizePermanentLinks(note.bodyEn, app, file, note.noteId)
+  const sources = normalizePermanentLinks(note.sources, app, file, note.noteId, false)
+  const values = {
+    noteId: note.noteId,
+    title: note.title,
+    titleEn: note.titleEn,
+    tags: note.tags,
+    aliases: note.aliases,
+    bodyZh: zh.markdown,
+    bodyEn: en.markdown,
+    sources: sources.markdown,
+    linkedNoteIds: uniqueValues([...zh.linkedNoteIds, ...en.linkedNoteIds])
+  }
+  const fields = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, localize(value, note.locale)]))
+  const entry = await upsertEntry(client, note.entryId, CONTENT_TYPES.PERMANENT_NOTE, fields)
+  if (context.mode === 'publish') await publishEntry(client, entry.sys.id)
+  return {
+    entry: await getEntry(client, entry.sys.id),
+    warnings: uniqueValues([...zh.warnings, ...en.warnings, ...sources.warnings]),
+    frontmatterUpdates: {
+      contentful_content_type: CONTENT_TYPES.PERMANENT_NOTE,
+      contentful_entry_id: entry.sys.id,
+      contentful_note_id: note.noteId,
+      contentful_locale: note.locale,
+      contentful_last_mode: context.mode === 'publish' ? 'published' : 'preview',
+      contentful_last_synced_at: new Date().toISOString(),
+      contentful_last_published_at:
+        context.mode === 'publish' ? new Date().toISOString() : (context.frontmatter.contentful_last_published_at ?? '')
+    }
+  }
+}
+
+// Generated by scripts/obsidian/generate-quickadd.cjs
 module.exports = createQuickAddModule('preview')

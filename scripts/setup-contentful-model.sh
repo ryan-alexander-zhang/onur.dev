@@ -12,6 +12,8 @@ usage() {
 Usage:
   CONTENTFUL_SPACE_ID=... CONTENTFUL_MANAGEMENT_TOKEN=... ./scripts/setup-contentful-model.sh
 
+  ./scripts/setup-contentful-model.sh --only permanentNote [--dry-run]
+
 Required environment variables:
   CONTENTFUL_SPACE_ID          Contentful space ID
   CONTENTFUL_MANAGEMENT_TOKEN  Contentful personal access token / management token
@@ -518,18 +520,66 @@ build_logbook_payload() {
   '
 }
 
+build_permanent_note_payload() {
+  jq -n '{
+    name: "Permanent Note",
+    description: "Bilingual Zettelkasten cards with stable timestamp identities and explicit links.",
+    displayField: "title",
+    fields: [
+      {id: "noteId", name: "Note ID", type: "Symbol", required: true,
+       validations: [{unique: true}, {regexp: {pattern: "^[0-9]{14}$"}}]},
+      {id: "title", name: "Chinese Title", type: "Symbol", required: true},
+      {id: "titleEn", name: "English Title", type: "Symbol", required: false},
+      {id: "tags", name: "Tags", type: "Array", items: {type: "Symbol"}},
+      {id: "aliases", name: "Aliases", type: "Array", items: {type: "Symbol"}},
+      {id: "bodyZh", name: "Chinese Markdown", type: "Text", required: true},
+      {id: "bodyEn", name: "English Markdown", type: "Text", required: false},
+      {id: "sources", name: "Sources Markdown", type: "Text", required: false},
+      {id: "linkedNoteIds", name: "Outgoing Note IDs", type: "Array", items: {type: "Symbol"}}
+    ]
+  }'
+}
+
 main() {
   if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     usage
     exit 0
   fi
 
-  require_command curl
+  local dry_run=false
+  if [[ "${*: -1}" == "--dry-run" ]]; then
+    dry_run=true
+    set -- "${@:1:$#-1}"
+  fi
+  local only=""
+  if [[ "$#" -gt 0 ]]; then
+    if [[ "$#" -ne 2 || "$1" != "--only" || "$2" != "permanentNote" ]]; then
+      echo "Supported targeted setup: --only permanentNote" >&2
+      exit 1
+    fi
+    only="$2"
+  fi
+
   require_command jq
+  if [[ "$dry_run" == true ]]; then
+    if [[ "$only" != "permanentNote" ]]; then
+      echo "Dry run requires --only permanentNote" >&2
+      exit 1
+    fi
+    build_permanent_note_payload
+    return
+  fi
+  require_command curl
   require_env CONTENTFUL_SPACE_ID "$CONTENTFUL_SPACE_ID"
   require_env CONTENTFUL_MANAGEMENT_TOKEN "$CONTENTFUL_MANAGEMENT_TOKEN"
 
   echo "Provisioning Contentful model in space '${CONTENTFUL_SPACE_ID}' environment '${CONTENTFUL_ENVIRONMENT_ID}'"
+
+  if [[ "$only" == "permanentNote" ]]; then
+    upsert_content_type "permanentNote" "$(build_permanent_note_payload)"
+    echo "Permanent Note model is ready; existing models were not touched."
+    return
+  fi
 
   upsert_content_type "seo" "$(build_seo_payload)"
   upsert_content_type "contentEmbed" "$(build_content_embed_payload)"
@@ -539,6 +589,8 @@ main() {
   upsert_content_type "page" "$(build_page_payload)"
   upsert_content_type "post" "$(build_post_payload)"
   upsert_content_type "logbook" "$(build_logbook_payload)"
+
+  upsert_content_type "permanentNote" "$(build_permanent_note_payload)"
 
   echo "Contentful content model is ready."
 }

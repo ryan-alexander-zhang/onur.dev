@@ -9,6 +9,7 @@ import { GeistSans } from 'geist/font/sans'
 import { cacheLife } from 'next/cache'
 import { draftMode } from 'next/headers'
 import Script from 'next/script'
+import { Suspense } from 'react'
 import { LuEye as EyeIcon } from 'react-icons/lu'
 
 import { GithubProfileProvider } from '@/components/github-profile-provider'
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }) {
     <html
       lang="en"
       data-theme="light"
+      data-scroll-behavior="smooth"
       className={`${GeistSans.variable} ${GeistMono.variable}`}
       suppressHydrationWarning
     >
@@ -46,9 +48,13 @@ export default async function RootLayout({ children }) {
               </div>
             )}
             <div className="lg:flex">
-              <SideMenu>
-                <MenuContent />
-              </SideMenu>
+              <Suspense
+                fallback={<div className="hidden bg-zinc-50 lg:block lg:w-60 lg:shrink-0 lg:border-r xl:w-72" />}
+              >
+                <SideMenu>
+                  <MenuContent />
+                </SideMenu>
+              </Suspense>
               <div className="flex flex-1">{children}</div>
             </div>
           </main>
@@ -72,6 +78,7 @@ export async function generateMetadata() {
   const iconVersion = '20260613-r1'
 
   return {
+    metadataBase: new URL(siteUrl),
     icons: {
       icon: [
         { url: `/favicon.ico?v=${iconVersion}`, sizes: 'any' },

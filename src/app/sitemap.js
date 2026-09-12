@@ -1,14 +1,16 @@
 import { getAllPageSlugs, getAllPosts } from '@/lib/contentful'
+import { getAllPermanentNotes } from '@/lib/permanent-notes'
 import { getBookmarks } from '@/lib/raindrop'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getSortedPosts } from '@/lib/utils'
 
 export default async function sitemap() {
-  const [{ siteBaseUrl, siteUrl }, allPosts, bookmarks, allPages] = await Promise.all([
+  const [{ siteBaseUrl, siteUrl }, allPosts, bookmarks, allPages, permanentNotes] = await Promise.all([
     getSiteMetadata(),
     getAllPosts(),
     getBookmarks(),
-    getAllPageSlugs()
+    getAllPageSlugs(),
+    getAllPermanentNotes()
   ])
 
   const sortedWritings = getSortedPosts(allPosts)
@@ -56,6 +58,16 @@ export default async function sitemap() {
       priority: 1
     },
     ...pages,
+    {
+      url: buildAbsoluteUrl(siteBaseUrl, 'cards'),
+      changeFrequency: 'weekly',
+      priority: 0.8
+    },
+    ...permanentNotes.map((note) => ({
+      url: buildAbsoluteUrl(siteBaseUrl, `cards/${encodeURIComponent(note.noteId)}`),
+      changeFrequency: 'monthly',
+      priority: 0.5
+    })),
     ...writings,
     ...mappedBookmarks
   ]
