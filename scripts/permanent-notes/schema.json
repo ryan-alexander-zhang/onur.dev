@@ -1,0 +1,22 @@
+{
+  "name": "Permanent Note",
+  "description": "Bilingual permanent cards with stable identities and explicit outgoing links. Managed by scripts/permanent-notes/setup.cjs.",
+  "displayField": "title",
+  "fields": [
+    {
+      "id": "noteId",
+      "name": "Note ID",
+      "type": "Symbol",
+      "required": true,
+      "validations": [{ "unique": true }, { "regexp": { "pattern": "^[0-9]{14}$" } }]
+    },
+    { "id": "title", "name": "Chinese title", "type": "Symbol", "required": true },
+    { "id": "titleEn", "name": "English title", "type": "Symbol" },
+    { "id": "tags", "name": "Tags", "type": "Array", "items": { "type": "Symbol" } },
+    { "id": "aliases", "name": "Aliases", "type": "Array", "items": { "type": "Symbol" } },
+    { "id": "bodyZh", "name": "Chinese Markdown", "type": "Text", "required": true },
+    { "id": "bodyEn", "name": "English Markdown", "type": "Text" },
+    { "id": "sources", "name": "Sources Markdown", "type": "Text" },
+    { "id": "linkedNoteIds", "name": "Outgoing card IDs", "type": "Array", "items": { "type": "Symbol" } }
+  ]
+}

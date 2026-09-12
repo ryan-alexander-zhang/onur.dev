@@ -269,10 +269,12 @@ contentful_locale: en-US
 4. 在 Contentful 里确认 Draft 内容正常
 5. 再执行 `Contentful Publish Current Note`
 
-## 8. Permanent Note / 卡片
+## 8. Permanent Note / 历史实现参考
 
-现有两个 QuickAdd Macro 同时支持
-`type: permanent-note`，不需要另建发布脚本。先在本地查看准确的 Contentful 模型，再由管理员执行定向设置；第二条命令会创建或更新并发布
+**新的永久笔记流程使用 [独立 Permanent Note 脚本和模型配置](../permanent-notes/README.md)。** 新脚本读取
+`english_title`，支持递归关联发布、循环引用和整目录发布；请安装独立命令。本节及下列命令仅记录旧实现，作为博客发布代码的历史参考。
+
+旧的两个 QuickAdd Macro 同时支持 `type: permanent-note`，但只发布当前笔记。以下历史设置命令会创建或更新并发布
 `permanentNote` 模型，不会修改其他类型：
 
 ```sh
