@@ -281,3 +281,9 @@
     transition: none;
   }
 }
+
+/* Affordances recede without changing their reserved layout or the rich body. */
+.flipButton,
+.sourceButton {
+  opacity: var(--card-focus, 1);
+}

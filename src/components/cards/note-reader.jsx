@@ -3,7 +3,7 @@
 import { gsap } from 'gsap'
 import Markdown from 'markdown-to-jsx'
 import NextLink from 'next/link'
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { LuBookOpen, LuRotateCw } from 'react-icons/lu'
 
 import {
@@ -32,71 +32,94 @@ function followCard(event, id, onNavigate) {
   onNavigate(id)
 }
 
+const NoteLinkContext = createContext(null)
+
+function NoteAnchor({ href = '', children }) {
+  const { noteIds, onNavigate } = useContext(NoteLinkContext)
+  const match = /^\/cards\/(\d{14})(?:[?#].*)?$/.exec(href)
+  if (match) {
+    const id = match[1]
+    return noteIds.has(id) ? (
+      <NextLink href={`/cards/${id}`} onClick={(event) => followCard(event, id, onNavigate)}>
+        {children}
+      </NextLink>
+    ) : (
+      <span className={styles.unavailable} aria-disabled="true" title="这张卡片尚未发布">
+        {children}
+        <small>未发布</small>
+      </span>
+    )
+  }
+  if (/^https?:\/\//i.test(href)) {
+    let safeHref
+    try {
+      const url = new URL(href)
+      if (url.hostname && !url.username && !url.password) safeHref = url.href
+    } catch {
+      /* Invalid URLs are readable text. */
+    }
+    if (safeHref)
+      return (
+        <a href={safeHref} target="_blank" rel="noopener noreferrer">
+          {children}
+        </a>
+      )
+  }
+  return <span>{children}</span>
+}
+
+function NoteImage({ alt }) {
+  return <span className={styles.imageDescription}>{alt || '图片'}</span>
+}
+
+const markdownOptions = { disableParsingRawHTML: true, forceBlock: true, overrides: { a: NoteAnchor, img: NoteImage } }
+
 export function NoteMarkdown({ children, noteIds = new Set(), onNavigate }) {
+  const context = useMemo(() => ({ noteIds, onNavigate }), [noteIds, onNavigate])
   return (
-    <Markdown
-      className={styles.markdown}
-      options={{
-        disableParsingRawHTML: true,
-        forceBlock: true,
-        overrides: {
-          a: ({ href = '', children }) => {
-            const match = /^\/cards\/(\d{14})(?:[?#].*)?$/.exec(href)
-            if (match) {
-              const id = match[1]
-              return noteIds.has(id) ? (
-                <NextLink href={`/cards/${id}`} onClick={(event) => followCard(event, id, onNavigate)}>
-                  {children}
-                </NextLink>
-              ) : (
-                <span className={styles.unavailable} aria-disabled="true" title="这张卡片尚未发布">
-                  {children}
-                  <small>未发布</small>
-                </span>
-              )
-            }
-            if (/^https?:\/\//i.test(href)) {
-              try {
-                const url = new URL(href)
-                if (url.hostname && !url.username && !url.password) {
-                  return (
-                    <a href={url.href} target="_blank" rel="noopener noreferrer">
-                      {children}
-                    </a>
-                  )
-                }
-              } catch {
-                /* Invalid URLs are readable text. */
-              }
-            }
-            return <span>{children}</span>
-          },
-          img: ({ alt }) => <span className={styles.imageDescription}>{alt || '图片'}</span>
-        }
-      }}
-    >
-      {children || ''}
-    </Markdown>
+    <NoteLinkContext.Provider value={context}>
+      <Markdown className={styles.markdown} options={markdownOptions}>
+        {children || ''}
+      </Markdown>
+    </NoteLinkContext.Provider>
   )
 }
 
-function Reader({ note, notes, onNavigate, headingRef, active }) {
-  const [english, setEnglish] = useState(false)
+function Reader({
+  note,
+  notes,
+  onNavigate,
+  headingRef,
+  active,
+  noteIds: providedIds,
+  english: controlledEnglish,
+  onEnglishChange
+}) {
+  const [localEnglish, setLocalEnglish] = useState(false)
+  const english = controlledEnglish ?? localEnglish
+  function setEnglish(value) {
+    const next = typeof value === 'function' ? value(english) : value
+    if (controlledEnglish === undefined) setLocalEnglish(next)
+    onEnglishChange?.(next)
+  }
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const rotor = useRef(null)
+  const orientationReady = useRef(false)
   const front = useRef(null)
   const back = useRef(null)
   const gesture = useRef(null)
   const lastScroll = useRef(0)
   const navigating = useRef(false)
-  const noteIds = useMemo(() => new Set(notes.map((item) => item.noteId)), [notes])
+  const noteIds = useMemo(() => providedIds || new Set(notes.map((item) => item.noteId)), [providedIds, notes])
 
   useLayoutEffect(() => {
     const element = rotor.current
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const initialOrientation = !orientationReady.current
+    orientationReady.current = true
     const flip = gsap.to(element, {
       rotateY: english ? 180 : 0,
-      duration: preference.matches ? 0 : 0.62,
+      duration: preference.matches || initialOrientation ? 0 : 0.62,
       ease: 'power2.inOut',
       overwrite: 'auto'
     })
@@ -282,7 +305,7 @@ function Reader({ note, notes, onNavigate, headingRef, active }) {
   )
 }
 
-export function NoteReader({ note, notes = [], onNavigate, active = true }) {
+export function NoteReader({ note, notes = [], noteIds, onNavigate, active = true, english, onEnglishChange }) {
   const headingRef = useRef(null)
   function navigate(id) {
     onNavigate(id)
@@ -291,10 +314,13 @@ export function NoteReader({ note, notes = [], onNavigate, active = true }) {
   }
   return (
     <Reader
-      key={`${note.noteId}:${active}`}
+      key={note.noteId}
       active={active}
       note={note}
       notes={notes}
+      noteIds={noteIds}
+      english={english}
+      onEnglishChange={onEnglishChange}
       headingRef={headingRef}
       onNavigate={onNavigate ? navigate : undefined}
     />

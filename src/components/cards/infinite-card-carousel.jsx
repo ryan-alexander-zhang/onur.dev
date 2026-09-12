@@ -23,6 +23,20 @@ export function InfiniteCardCarousel({ notes, allNotes, selectedId, onSelectNote
   )
   const [activeSlot, setActiveSlot] = useState(firstIndex)
   const [moving, setMoving] = useState(false)
+  const [readerCenter, setReaderCenter] = useState(firstIndex)
+  const [languages, setLanguages] = useState({})
+  const noteIds = useMemo(() => new Set(allNotes.map((note) => note.noteId)), [allNotes])
+  const preparedCenter = useRef(firstIndex)
+  const requestedCenter = useRef(firstIndex)
+  const richSlots = useMemo(
+    () =>
+      new Set(
+        Array.from({ length: Math.min(count, 9) }, (_, offset) =>
+          modulo(readerCenter + offset - Math.min(4, Math.floor(count / 2)), count)
+        )
+      ),
+    [readerCenter, count]
+  )
   const stage = useRef(null)
   const elements = useRef([])
   const api = useRef(null)
@@ -31,6 +45,10 @@ export function InfiniteCardCarousel({ notes, allNotes, selectedId, onSelectNote
   useLayoutEffect(() => {
     callbacks.current = { onSelectNote }
   }, [onSelectNote])
+  useLayoutEffect(() => {
+    preparedCenter.current = readerCenter
+    api.current?.paint()
+  }, [readerCenter])
 
   useLayoutEffect(() => {
     if (!count || !stage.current) return
@@ -47,17 +65,33 @@ export function InfiniteCardCarousel({ notes, allNotes, selectedId, onSelectNote
     let alive = true
     const proxy = document.createElement('div')
     function paint() {
+      if (count > 9) {
+        const center = modulo(Math.round(playhead.value), count)
+        const offset = gsap.utils.wrap(-count / 2, count / 2, center - preparedCenter.current)
+        if (Math.abs(offset) >= 2) {
+          if (requestedCenter.current !== center) {
+            requestedCenter.current = center
+            setReaderCenter(center)
+          }
+          // Commit the nearby rich readers before moving any card into view.
+          return
+        }
+      }
       for (let index = 0; index < count; index++) {
         const element = elements.current[index]
         if (!element) continue
         const distance = count === 1 ? 0 : gsap.utils.wrap(-count / 2, count / 2, index - playhead.value)
         const absolute = Math.abs(distance)
+        const defocus = Math.min(1, absolute / 1.8)
+        const focus = Math.min(1, absolute)
         gsap.set(element, {
           x: distance * spacing,
           y: absolute * 15,
           scale: Math.max(0.48, 1 - absolute * 0.21),
           rotationY: distance * -5,
           opacity: Math.max(0, 1 - absolute * 0.37),
+          filter: `blur(${1.6 * defocus * defocus * (3 - 2 * defocus)}px)`,
+          '--card-focus': 1 - focus * focus * (3 - 2 * focus),
           zIndex: Math.round(100 - absolute * 15),
           visibility: absolute > 2.7 ? 'hidden' : 'visible'
         })
@@ -183,7 +217,8 @@ export function InfiniteCardCarousel({ notes, allNotes, selectedId, onSelectNote
     api.current = {
       next: (direction) => move(destination + direction),
       center: (index) => move(destination + gsap.utils.wrap(-count / 2, count / 2, index - destination)),
-      select
+      select,
+      paint
     }
     return () => {
       alive = false
@@ -251,29 +286,31 @@ export function InfiniteCardCarousel({ notes, allNotes, selectedId, onSelectNote
               data-note-id={note.noteId}
               aria-hidden={!active}
             >
-              {active ? (
-                <div className={styles.reader} data-carousel-reader inert={moving}>
-                  <NoteReader key={note.noteId} note={note} notes={allNotes} onNavigate={onNavigate} active />
+              {richSlots.has(index) && (
+                <div
+                  className={styles.reader}
+                  data-carousel-reader={active ? 'true' : undefined}
+                  inert={!active || moving}
+                >
+                  <NoteReader
+                    note={note}
+                    noteIds={noteIds}
+                    onNavigate={onNavigate}
+                    active={active && !moving}
+                    english={Boolean(languages[note.noteId])}
+                    onEnglishChange={(value) => setLanguages((previous) => ({ ...previous, [note.noteId]: value }))}
+                  />
                 </div>
-              ) : (
+              )}
+              {!active && (
                 <button
                   type="button"
-                  className={styles.preview}
+                  className={styles.recenter}
                   data-clickable="false"
                   tabIndex={-1}
                   onClick={() => api.current?.center(index)}
                   aria-label={`切换到：${note.title}`}
-                >
-                  <span className={styles.previewId}>{note.noteId}</span>
-                  <strong>{note.title}</strong>
-                  <span className={styles.previewBody}>
-                    {(note.bodyZh || '')
-                      .replace(/!?\[([^\]]+)\]\([^)]*\)/g, '$1')
-                      .replace(/[#*_`>]/g, '')
-                      .slice(0, 240)}
-                  </span>
-                  <span className={styles.previewTag}>{note.tags.join(' · ')}</span>
-                </button>
+                />
               )}
             </div>
           )
