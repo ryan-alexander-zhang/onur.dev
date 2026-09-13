@@ -13,7 +13,7 @@ module.exports = defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 60000,
-  use: { baseURL: 'http://127.0.0.1:3101', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+  use: { baseURL: 'http://localhost:3101', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [
     {
       name: 'desktop',
@@ -24,7 +24,7 @@ module.exports = defineConfig({
   webServer: {
     command: 'node node_modules/next/dist/bin/next dev --port 3101',
     cwd: path.resolve(__dirname, '..'),
-    url: 'http://127.0.0.1:3101/journey',
+    url: 'http://localhost:3101/journey',
     timeout: 120000,
     reuseExistingServer: false,
     env: {

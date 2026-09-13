@@ -3,6 +3,8 @@
 独立模型 `journalEntry`、独立 QuickAdd 脚本，发布源是 `05-Areas/Journal/Entries/` 中 `type: journal`
 的笔记。Journey 使用 timDeHof/shadcn-timeline 的原版组件源码，按日期倒序、按年份分组显示。
 
+Journey 沿用 Writing 的双栏阅读布局：左侧是日期时间线，点击条目在右侧阅读全文，不显示正文目录。手机上先选择时间线条目，再进入正文，返回按钮回到时间线。每篇日记有稳定地址 `/journey/{noteId}`，支持直接访问和浏览器前进/后退。
+
 ## 发布范围
 
 **只上传 `## Log`、`## Thoughts`、`## Review`。**

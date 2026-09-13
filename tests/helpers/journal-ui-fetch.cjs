@@ -15,6 +15,16 @@ const items = [
     linkedNoteIds: ['20260908201230']
   },
   {
+    noteId: '20260913070000',
+    title: 'An earlier moment',
+    date: '2026-09-13T00:00:00.000Z',
+    tags: [],
+    log: 'Another entry on the same day has its own place on the timeline.',
+    thoughts: '',
+    review: '',
+    linkedNoteIds: []
+  },
+  {
     noteId: '20260912090000',
     title: 'A little room to think',
     date: '2026-09-12T00:00:00.000Z',

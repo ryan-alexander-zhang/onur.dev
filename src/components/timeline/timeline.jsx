@@ -55,6 +55,7 @@ const TimelineItem = React.forwardRef(
     {
       className,
       date,
+      compact = false,
       title,
       description,
       children,
@@ -141,22 +142,29 @@ const TimelineItem = React.forwardRef(
     }
     const content = (
       <div
-        className="grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:grid-cols-[5.5rem_2rem_minmax(0,1fr)]"
+        className={cn(
+          'grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 gap-y-3',
+          !compact && 'sm:grid-cols-[5.5rem_2rem_minmax(0,1fr)]'
+        )}
         {...(status === 'in-progress' ? { 'aria-current': 'step' } : {})}
       >
         {/* Date */}
-        <div className="col-start-2 row-start-1 flex flex-col pt-1 sm:col-start-1">
-          <TimelineTime
-            date={date}
-            format={{ month: 'short', day: '2-digit', year: undefined }}
-            className="sm:text-right"
-          />
-        </div>
-
+        {!compact && (
+          <div className="col-start-2 row-start-1 flex flex-col pt-1 sm:col-start-1">
+            <TimelineTime
+              date={date}
+              format={{ month: 'short', day: '2-digit', year: undefined }}
+              className="sm:text-right"
+            />
+          </div>
+        )}
         {/* Timeline dot and connector */}
         <div
           aria-hidden="true"
-          className="relative col-start-1 row-span-2 row-start-1 flex h-full flex-col items-center sm:col-start-2 sm:row-span-1"
+          className={cn(
+            'relative col-start-1 row-start-1 flex h-full flex-col items-center',
+            !compact && 'row-span-2 sm:col-start-2 sm:row-span-1'
+          )}
         >
           <div className="relative z-10">
             <TimelineIcon icon={icon} color={iconColor} status={status} iconSize={iconsize} />
@@ -165,7 +173,12 @@ const TimelineItem = React.forwardRef(
         </div>
 
         {/* Content */}
-        <TimelineContent className="col-start-2 row-start-2 min-w-0 p-0 sm:col-start-3 sm:row-start-1">
+        <TimelineContent
+          className={cn(
+            'col-start-2 min-w-0 p-0',
+            compact ? 'row-start-1' : 'row-start-2 sm:col-start-3 sm:row-start-1'
+          )}
+        >
           {title && (
             <TimelineHeader>
               <TimelineTitle>{title}</TimelineTitle>

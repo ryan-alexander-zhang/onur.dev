@@ -9,6 +9,17 @@ const QUERY = `query JournalEntries($preview: Boolean!, $skip: Int!, $limit: Int
 const string = (value) => (typeof value === 'string' ? value : '')
 const strings = (value) => [...new Set(Array.isArray(value) ? value.filter((v) => typeof v === 'string' && v) : [])]
 
+export function journalExcerpt(entry) {
+  return (entry.log || entry.thoughts || entry.review || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[#*_`>~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160)
+}
+
 export function normalizeJournal(item) {
   return {
     noteId: string(item.noteId),
