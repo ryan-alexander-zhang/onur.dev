@@ -1,0 +1,21 @@
+{
+  "name": "Journal Entry",
+  "description": "Journey timeline entries: only Log, Thoughts and Review from Obsidian Journal.",
+  "displayField": "title",
+  "fields": [
+    {
+      "id": "noteId",
+      "name": "Note ID",
+      "type": "Symbol",
+      "required": true,
+      "validations": [{ "unique": true }, { "regexp": { "pattern": "^[0-9]{14}$" } }]
+    },
+    { "id": "title", "name": "Title", "type": "Symbol", "required": true },
+    { "id": "date", "name": "Journal date", "type": "Date", "required": true },
+    { "id": "tags", "name": "Tags", "type": "Array", "items": { "type": "Symbol" } },
+    { "id": "log", "name": "Log Markdown", "type": "Text" },
+    { "id": "thoughts", "name": "Thoughts Markdown", "type": "Text" },
+    { "id": "review", "name": "Review Markdown", "type": "Text" },
+    { "id": "linkedNoteIds", "name": "Linked Permanent card IDs", "type": "Array", "items": { "type": "Symbol" } }
+  ]
+}

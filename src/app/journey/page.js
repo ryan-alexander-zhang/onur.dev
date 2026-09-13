@@ -1,70 +1,33 @@
-import { cacheLife } from 'next/cache'
 import { Suspense } from 'react'
 
 import { FloatingHeader } from '@/components/floating-header'
 import { GradientBg3 } from '@/components/gradient-bg'
-import { JourneyCard } from '@/components/journey-card'
+import { JourneyTimeline } from '@/components/journey-timeline'
 import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
-import { getAllLogbook, getPageSeo } from '@/lib/contentful'
+import { getPageSeo } from '@/lib/contentful'
+import { getJournalEntries } from '@/lib/journal'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 
-async function fetchData() {
-  'use cache'
-  cacheLife('max')
-
-  const allLogbook = await getAllLogbook()
-
-  const mappedLogbook = []
-  allLogbook.map((log) => {
-    const year = new Date(log.date).getFullYear()
-    const existingYear = mappedLogbook.find((item) => item?.year === year)
-    if (!existingYear) mappedLogbook.push({ year, logs: [log] })
-    else existingYear.logs.push(log)
-  })
-
-  return { allLogbook: mappedLogbook }
+async function JournalFeed() {
+  const entries = await getJournalEntries()
+  return <JourneyTimeline entries={entries} />
 }
 
-export default async function Journey() {
-  'use cache'
-
-  cacheLife('max')
-  const { allLogbook } = await fetchData()
-
+export default function Journey() {
   return (
     <ScrollArea useScrollAreaId>
       <GradientBg3 />
       <FloatingHeader scrollTitle="Journey" />
       <div className="content-wrapper">
         <div className="content">
-          <PageTitle title="Journey" />
+          <PageTitle
+            title="Journey"
+            subtitle={<p className="mt-3 mb-0 text-sm text-gray-500">Notes, thoughts, and lessons along the way.</p>}
+          />
           <Suspense fallback={<ScreenLoadingSpinner />}>
-            <div className="flex flex-col items-stretch gap-12">
-              {allLogbook.map((item, itemIndex) => (
-                <div key={`data_${itemIndex}`} className="flex flex-col items-baseline gap-6 md:flex-row md:gap-12">
-                  <h2>{item.year}</h2>
-                  <section>
-                    {item.logs.map((log, logIndex) => (
-                      <div key={`data_${itemIndex}_log_${logIndex}`} className="relative flex pb-8 last:pb-0">
-                        {logIndex !== item.logs.length - 1 && (
-                          <div className="absolute inset-0 top-0.5 flex w-5 items-center justify-center">
-                            <div className="pointer-events-none h-full w-px border-l border-dashed border-gray-200"></div>
-                          </div>
-                        )}
-                        <div className="z-0 mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border bg-white text-white shadow-xs">
-                          <div className="size-2 rounded-full bg-blue-600" />
-                        </div>
-                        <div className="grow pl-4 lg:pl-8">
-                          <JourneyCard {...log} />
-                        </div>
-                      </div>
-                    ))}
-                  </section>
-                </div>
-              ))}
-            </div>
+            <JournalFeed />
           </Suspense>
         </div>
       </div>

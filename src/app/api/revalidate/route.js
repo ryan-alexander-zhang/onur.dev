@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 
 import { CONTENT_TYPES } from '@/lib/constants'
+import { JOURNAL_CACHE_TAG } from '@/lib/journal-data'
 import { PERMANENT_NOTES_CACHE_TAG } from '@/lib/permanent-notes-data'
 
 const secret = process.env.NEXT_REVALIDATE_SECRET
@@ -113,6 +114,11 @@ export async function POST(request) {
       break
     case CONTENT_TYPES.LOGBOOK:
       revalidatePath('/journey')
+      break
+    case CONTENT_TYPES.JOURNAL_ENTRY:
+      revalidateTag(JOURNAL_CACHE_TAG, { expire: 0 })
+      revalidatePath('/journey')
+      revalidatePath('/journey', 'layout')
       break
     default:
       return jsonWithCors(
