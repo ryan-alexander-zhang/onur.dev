@@ -125,14 +125,14 @@
 .markdown > :last-child {
   margin-bottom: 0;
 }
-.markdown p,
+.markdown .paragraph,
 .markdown ul,
 .markdown ol,
 .markdown blockquote,
 .markdown pre {
   margin: 0 0 1.1em;
 }
-.markdown p {
+.markdown .paragraph {
   line-height: inherit;
 }
 .markdown ul,

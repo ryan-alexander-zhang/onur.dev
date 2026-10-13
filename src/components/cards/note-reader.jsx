@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog'
+import { ZoomableImage } from '@/components/ui/zoomable-image'
 
 import styles from './note-reader.module.css'
 
@@ -68,11 +69,30 @@ function NoteAnchor({ href = '', children }) {
   return <span>{children}</span>
 }
 
-function NoteImage({ alt }) {
+function NoteImage({ alt, src, title }) {
+  let safeSrc
+  try {
+    const url = new URL(src)
+    if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) {
+      safeSrc = url.href
+    }
+  } catch {
+    // Unpublished local images and invalid URLs remain readable text.
+  }
+  if (safeSrc) return <ZoomableImage src={safeSrc} alt={alt || '图片'} title={title} />
   return <span className={styles.imageDescription}>{alt || '图片'}</span>
 }
 
-const markdownOptions = { disableParsingRawHTML: true, forceBlock: true, overrides: { a: NoteAnchor, img: NoteImage } }
+const markdownOptions = {
+  disableParsingRawHTML: true,
+  forceBlock: true,
+  overrides: {
+    a: NoteAnchor,
+    img: NoteImage,
+    // Image figures cannot be nested in a paragraph element.
+    p: ({ children }) => <div className={styles.paragraph}>{children}</div>
+  }
+}
 
 export function NoteMarkdown({ children, noteIds = new Set(), onNavigate }) {
   const context = useMemo(() => ({ noteIds, onNavigate }), [noteIds, onNavigate])
