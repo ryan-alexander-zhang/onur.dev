@@ -1,26 +1,20 @@
-'use cache'
-
-import { cacheLife } from 'next/cache'
+import { draftMode } from 'next/headers'
 import { Suspense } from 'react'
 
 import { ListItem } from '@/components/list-item'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { SideMenu } from '@/components/side-menu'
 import { Toaster } from '@/components/ui/sonner'
-import { getBookmarks } from '@/lib/raindrop'
+import { getBookmarks } from '@/lib/bookmarks'
 import { sortByProperty } from '@/lib/utils'
 
 async function fetchData() {
-  'use cache'
-  cacheLife('max')
-
-  const bookmarks = await getBookmarks()
+  const bookmarks = await getBookmarks((await draftMode()).isEnabled)
   const sortedBookmarks = sortByProperty(bookmarks, 'title')
   return { bookmarks: sortedBookmarks }
 }
 
-export default async function BookmarksLayout({ children }) {
-  cacheLife('max')
+async function BookmarksShell({ children }) {
   const { bookmarks } = await fetchData()
 
   return (
@@ -57,4 +51,12 @@ export default async function BookmarksLayout({ children }) {
 export const viewport = {
   //  To fix the zoom issue on mobile for the bookmark submit form
   maximumScale: 1
+}
+
+export default function BookmarksLayout({ children }) {
+  return (
+    <Suspense fallback={<ScreenLoadingSpinner />}>
+      <BookmarksShell>{children}</BookmarksShell>
+    </Suspense>
+  )
 }

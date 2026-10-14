@@ -1,4 +1,4 @@
-import { cacheLife } from 'next/cache'
+import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -7,25 +7,17 @@ import { FloatingHeader } from '@/components/floating-header'
 import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
-import { getBookmarkItems, getBookmarks } from '@/lib/raindrop'
+import { getBookmarkItems, getBookmarks } from '@/lib/bookmarks'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
-export async function generateStaticParams() {
-  const bookmarks = await getBookmarks()
-  return bookmarks.map((bookmark) => ({ slug: bookmark.slug }))
-}
-
 async function fetchData(slug) {
-  'use cache'
-  cacheLife('max')
-
-  const bookmarks = await getBookmarks()
+  const bookmarks = await getBookmarks((await draftMode()).isEnabled)
   const currentBookmark = bookmarks.find((bookmark) => bookmark.slug === slug)
   if (!currentBookmark) notFound()
 
   const sortedBookmarks = sortByProperty(bookmarks, 'title')
-  const bookmarkItems = await getBookmarkItems(currentBookmark._id)
+  const bookmarkItems = await getBookmarkItems(currentBookmark._id, 0, (await draftMode()).isEnabled)
 
   return {
     bookmarks: sortedBookmarks,
@@ -34,10 +26,7 @@ async function fetchData(slug) {
   }
 }
 
-export default async function CollectionPage(props) {
-  'use cache'
-
-  cacheLife('max')
+async function CollectionPage(props) {
   const params = await props.params
   const { slug } = params
   const { bookmarks, currentBookmark, bookmarkItems } = await fetchData(slug)
@@ -54,7 +43,7 @@ export default async function CollectionPage(props) {
         <div className="content @container">
           <PageTitle title={currentBookmark.title} />
           <Suspense fallback={<ScreenLoadingSpinner />}>
-            <BookmarkList id={currentBookmark._id} initialData={bookmarkItems} />
+            <BookmarkList key={currentBookmark._id} id={currentBookmark._id} initialData={bookmarkItems} />
           </Suspense>
         </div>
       </div>
@@ -65,7 +54,10 @@ export default async function CollectionPage(props) {
 export async function generateMetadata(props) {
   const params = await props.params
   const { slug } = params
-  const [{ author, siteBaseUrl }, bookmarks] = await Promise.all([getSiteMetadata(), getBookmarks()])
+  const [{ author, siteBaseUrl }, bookmarks] = await Promise.all([
+    getSiteMetadata(),
+    getBookmarks((await draftMode()).isEnabled)
+  ])
   const currentBookmark = bookmarks.find((bookmark) => bookmark.slug === slug)
   if (!currentBookmark) return null
 
@@ -93,4 +85,12 @@ export async function generateMetadata(props) {
       canonical: siteUrl
     }
   }
+}
+
+export default function Page(props) {
+  return (
+    <Suspense fallback={<ScreenLoadingSpinner />}>
+      <CollectionPage {...props} />
+    </Suspense>
+  )
 }

@@ -1,6 +1,6 @@
+import { getBookmarks } from '@/lib/bookmarks'
 import { getAllPageSlugs, getAllPosts } from '@/lib/contentful'
 import { getAllPermanentNotes } from '@/lib/permanent-notes'
-import { getBookmarks } from '@/lib/raindrop'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { getSortedPosts } from '@/lib/utils'
 

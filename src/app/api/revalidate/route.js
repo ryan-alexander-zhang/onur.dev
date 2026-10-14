@@ -1,5 +1,6 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 
+import { BOOKMARKS_CACHE_TAG } from '@/lib/bookmarks-data'
 import { CONTENT_TYPES } from '@/lib/constants'
 import { JOURNAL_CACHE_TAG } from '@/lib/journal-data'
 import { PERMANENT_NOTES_CACHE_TAG } from '@/lib/permanent-notes-data'
@@ -74,6 +75,17 @@ export async function POST(request) {
   const { contentTypeId, slug } = payload
 
   switch (contentTypeId) {
+    case CONTENT_TYPES.BOOKMARK_CATALOG:
+      revalidateTag(BOOKMARKS_CACHE_TAG, { expire: 0 })
+      revalidatePath('/bookmarks', 'layout')
+      revalidatePath('/bookmarks/[slug]', 'page')
+      for (const groupSlug of Array.isArray(payload.slugs) ? payload.slugs : []) {
+        if (typeof groupSlug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(groupSlug))
+          revalidatePath(`/bookmarks/${groupSlug}/og.png`)
+      }
+      revalidatePath('/bookmarks.xml')
+      revalidatePath('/sitemap.xml')
+      break
     case CONTENT_TYPES.PAGE:
       if (slug) {
         revalidatePath(`/${slug}`)

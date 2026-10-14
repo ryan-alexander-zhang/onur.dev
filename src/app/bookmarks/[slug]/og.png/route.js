@@ -1,18 +1,13 @@
 import { ImageResponse } from 'next/og'
 
 import { OpenGraphImage } from '@/components/og-image'
+import { getBookmarks } from '@/lib/bookmarks'
 import { getBoldFont, getRegularFont } from '@/lib/fonts'
-import { getBookmarks } from '@/lib/raindrop'
 import { getSiteMetadata, OG_IMAGE } from '@/lib/site'
 
 export const size = {
   width: OG_IMAGE.width,
   height: OG_IMAGE.height
-}
-
-export async function generateStaticParams() {
-  const bookmarks = await getBookmarks()
-  return bookmarks.map((bookmark) => ({ slug: bookmark.slug }))
 }
 
 export async function GET(_, props) {
@@ -25,7 +20,7 @@ export async function GET(_, props) {
     getBoldFont()
   ])
   const currentBookmark = bookmarks.find((bookmark) => bookmark.slug === slug)
-  if (!currentBookmark) return null
+  if (!currentBookmark) return new Response('Bookmark group not found', { status: 404 })
 
   return new ImageResponse(
     (

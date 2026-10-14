@@ -1,28 +1,22 @@
-import { cacheLife } from 'next/cache'
+import { draftMode } from 'next/headers'
 import NextLink from 'next/link'
 import { Suspense } from 'react'
 
 import { FloatingHeader } from '@/components/floating-header'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
+import { getBookmarks } from '@/lib/bookmarks'
 import { getPageSeo } from '@/lib/contentful'
-import { getBookmarks } from '@/lib/raindrop'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
 async function fetchData() {
-  'use cache'
-  cacheLife('max')
-
-  const bookmarks = await getBookmarks()
+  const bookmarks = await getBookmarks((await draftMode()).isEnabled)
   const sortedBookmarks = sortByProperty(bookmarks, 'title')
   return { bookmarks: sortedBookmarks }
 }
 
-export default async function Writing() {
-  'use cache'
-
-  cacheLife('max')
+async function BookmarksIndex() {
   const { bookmarks } = await fetchData()
 
   return (
@@ -67,4 +61,12 @@ export async function generateMetadata() {
       canonical: siteUrl
     }
   }
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<ScreenLoadingSpinner />}>
+      <BookmarksIndex />
+    </Suspense>
+  )
 }

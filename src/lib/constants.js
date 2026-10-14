@@ -55,5 +55,6 @@ export const CONTENT_TYPES = {
   POST: 'post',
   LOGBOOK: 'logbook',
   JOURNAL_ENTRY: 'journalEntry',
+  BOOKMARK_CATALOG: 'bookmarkCatalog',
   PERMANENT_NOTE: 'permanentNote'
 }

@@ -1,33 +1,35 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { LuArrowDown as ArrowDownIcon } from 'react-icons/lu'
 
 import { getBookmarkItemsByPageIndex } from '@/app/actions'
 import { BookmarkCard } from '@/components/bookmark-card'
 import { Button } from '@/components/ui/button'
-import { TWEETS_COLLECTION_ID } from '@/lib/constants'
-import { cn } from '@/lib/utils'
 
 export const BookmarkList = ({ initialData, id }) => {
   const [data, setData] = useState(initialData?.result ? initialData?.items : [])
   const [pageIndex, setPageIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [count, setCount] = useState(initialData?.count ?? 0)
 
-  const loadMore = () => {
-    if (!isReachingEnd && !isLoading) setPageIndex((prevPageIndex) => prevPageIndex + 1)
-  }
-
-  const fetchInfiniteData = useCallback(async () => {
+  const loadMore = async () => {
+    if (isReachingEnd || isLoading) return
     setIsLoading(true)
-    const newData = await getBookmarkItemsByPageIndex(id, pageIndex)
-    if (newData.result) setData((prevData) => [...prevData, ...newData.items])
-    setIsLoading(false)
-  }, [id, pageIndex])
-
-  useEffect(() => {
-    if (pageIndex > 0) fetchInfiniteData()
-  }, [pageIndex, fetchInfiniteData])
+    setError('')
+    try {
+      const newData = await getBookmarkItemsByPageIndex(id, pageIndex + 1)
+      if (!newData?.result) throw new Error('No bookmark data')
+      setData((previous) => [...new Map([...previous, ...newData.items].map((item) => [item._id, item])).values()])
+      setCount(newData.count)
+      setPageIndex((page) => page + 1)
+    } catch {
+      setError('Could not load bookmarks. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const getChunks = useCallback(() => {
     const firstChunk = []
@@ -43,37 +45,35 @@ export const BookmarkList = ({ initialData, id }) => {
   }, [data])
 
   const chunks = useMemo(() => getChunks(), [getChunks])
-  const isReachingEnd = data.length >= (initialData?.count ?? 0)
-  const isTweetCollection = id === TWEETS_COLLECTION_ID
+  const isReachingEnd = data.length >= count || (pageIndex + 1) * 50 >= count
 
   const memoizedBookmarks = useMemo(() => {
     return data.map((bookmark, bookmarkIndex) => (
-      <div
-        key={`bookmark_${bookmarkIndex}`}
-        className={cn('grid gap-4', isTweetCollection ? 'h-fit' : 'place-content-start')}
-      >
+      <div key={bookmark._id} className="grid place-content-start gap-4">
         <BookmarkCard key={bookmark._id} bookmark={bookmark} order={bookmarkIndex} />
       </div>
     ))
-  }, [data, isTweetCollection])
+  }, [data])
 
   const memoizedChunks = useMemo(() => {
     return chunks.map((chunk, chunkIndex) => (
-      <div
-        key={`chunk_${chunkIndex}`}
-        className={cn('grid gap-4', isTweetCollection ? 'h-fit' : 'place-content-start')}
-      >
+      <div key={`chunk_${chunkIndex}`} className="grid place-content-start gap-4">
         {chunk.map((bookmark, bookmarkIndex) => (
           <BookmarkCard key={bookmark._id} bookmark={bookmark} order={bookmarkIndex} />
         ))}
       </div>
     ))
-  }, [chunks, isTweetCollection])
+  }, [chunks])
 
   return (
     <div>
       <div className="flex flex-col gap-4 @lg:hidden">{memoizedBookmarks}</div>
       <div className="hidden @lg:grid @lg:grid-cols-2 @lg:gap-4">{memoizedChunks}</div>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-red-600">
+          {error}
+        </p>
+      )}
       {data.length > 0 ? (
         <div className="mt-8 flex min-h-16 items-center justify-center text-sm lg:mt-12">
           {!isReachingEnd ? (

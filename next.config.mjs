@@ -23,6 +23,21 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      ...['courses', 'github', 'book', 'inbox', 'tweets', 'fonts', 'portfolio', 'websites'].map((slug) => ({
+        source: `/bookmarks/${slug}`,
+        destination: '/bookmarks',
+        permanent: true
+      })),
+      ...Object.entries({
+        'apps-and-tools': 'tools',
+        frontend: 'development',
+        'vs-code': 'development',
+        wallpapers: 'design'
+      }).map(([from, to]) => ({
+        source: `/bookmarks/${from}`,
+        destination: `/bookmarks/${to}`,
+        permanent: true
+      })),
       {
         source: '/turkiyeden-gitmek-berline-uzanan-bir-goc-hikayesi-bolum-1-nedenler',
         destination: '/writing/bir-yazilimci-olarak-turkiyeden-gitmek',
