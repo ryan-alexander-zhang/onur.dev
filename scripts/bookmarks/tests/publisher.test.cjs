@@ -5,7 +5,7 @@ const { parseBookmark, buildPlan, syncPlan, schema, localCover } = require('../l
 const parseYaml = (text) => yaml.load(text, { schema: yaml.CORE_SCHEMA })
 const file = { path: '06-Resources/Web/Bookmarks/Example.md', extension: 'md', basename: 'Example' }
 const note = (id = '20260101080000', extra = '') =>
-  `---\nid: ${id}\ncreated: 2026-01-01 08:00:00\ntype: bookmark\nsource: https://example.com/\nbookmark_status: saved\nbookmark_group: AI\nbookmark_kind: tool\ntags: [ai]\n${extra}---\n# Example\n\n## 为什么收藏\nPRIVATE\n## 内容摘要\n\nUseful **summary**.\n\n## 相关笔记\n[[PRIVATE LINK]]\n`
+  `---\nid: ${id}\ncreated: 2026-01-01 08:00:00\ntype: bookmark\nsource: https://example.com/\nbookmark_status: saved\nbookmark_group: AI\ntags: [ai, tool]\n${extra}---\n# Example\n\n## 为什么收藏\nPRIVATE\n## 内容摘要\n\nUseful **summary**.\n\n## 相关笔记\n[[PRIVATE LINK]]\n`
 const base = { path: 'Bookmarks.base' }
 const baseRaw =
   'views:\n  - name: 网站\n    type: cards\n    sort:\n      - property: created\n        direction: DESC\n'
@@ -18,6 +18,8 @@ const app = {
 test('extract only public fields, keep H1 and vault date, exclude private body', () => {
   const item = parseBookmark(file, note(), parseYaml)
   assert.equal(item.title, 'Example')
+  assert.deepEqual(item.tags, ['ai', 'tool'])
+  assert.equal(Object.hasOwn(item, 'kind'), false)
   assert.equal(item.description, 'Useful summary.')
   assert.equal(item.created, '2026-01-01T00:00:00.000Z')
   assert.doesNotMatch(JSON.stringify(item), /PRIVATE|Example.md/)

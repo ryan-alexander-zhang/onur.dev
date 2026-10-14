@@ -1,41 +1,28 @@
 import { draftMode } from 'next/headers'
-import NextLink from 'next/link'
 import { Suspense } from 'react'
 
+import { BookmarkList } from '@/components/bookmark-list'
+import { BookmarkTitle } from '@/components/bookmark-title'
 import { FloatingHeader } from '@/components/floating-header'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
-import { getBookmarks } from '@/lib/bookmarks'
+import { getBookmarkCatalog } from '@/lib/bookmarks'
 import { getPageSeo } from '@/lib/contentful'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
-async function fetchData() {
-  const bookmarks = await getBookmarks((await draftMode()).isEnabled)
-  const sortedBookmarks = sortByProperty(bookmarks, 'title')
-  return { bookmarks: sortedBookmarks }
-}
-
 async function BookmarksIndex() {
-  const { bookmarks } = await fetchData()
-
+  const catalog = await getBookmarkCatalog((await draftMode()).isEnabled)
+  const bookmarks = sortByProperty(catalog.groups, 'title')
   return (
-    <ScrollArea className="lg:hidden">
+    <ScrollArea className="bg-grid" useScrollAreaId>
       <FloatingHeader title="Bookmarks" bookmarks={bookmarks} />
-      <Suspense fallback={<ScreenLoadingSpinner />}>
-        {bookmarks?.map((bookmark) => {
-          return (
-            <NextLink
-              key={bookmark._id}
-              href={`/bookmarks/${bookmark.slug}`}
-              className="flex flex-col gap-1 border-b px-4 py-3 text-sm hover:bg-gray-100"
-            >
-              <span className="font-medium">{bookmark.title}</span>
-              <span className="text-slate-500">{bookmark.count} bookmarks</span>
-            </NextLink>
-          )
-        })}
-      </Suspense>
+      <div className="content-wrapper">
+        <div className="content @container">
+          <BookmarkTitle title="All bookmarks" groups={catalog.groups} />
+          <BookmarkList catalog={catalog} />
+        </div>
+      </div>
     </ScrollArea>
   )
 }

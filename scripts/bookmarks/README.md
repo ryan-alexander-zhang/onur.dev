@@ -13,14 +13,14 @@ Entry（`bookmarkCatalog_main`），不会为各书签创建 Entry。
 笔记必须位于 `06-Resources/Web/Bookmarks/`，`type: bookmark`。默认网站视图排除 `retired`
 和非 HTTP(S) 链接。Inbox 不进入快照。不要给发布视图设置截断记录的 limit；如果筛选移除了书签，下一次发布也会将它从网站移除。空结果会阻止覆盖，避免误清空整个网站。
 
-发布字段：`id`、`title`（缺失取 H1）、`source`、`description`、`cover`、`bookmark_group`、`bookmark_kind`、`tags`、`created`。缺少 description 时读取「内容摘要」作为兼容回退。其他正文、个人备注、关联笔记及本地文件路径不会上传。UTC 偏移未标注的日期按 vault 的 Asia/Shanghai 时间解释。
+发布字段：`id`、`title`（缺失取 H1）、`source`、`description`、`cover`、`bookmark_group`、`tags`、`created`。缺少 description 时读取「内容摘要」作为兼容回退。其他正文、个人备注、关联笔记及本地文件路径不会上传。UTC 偏移未标注的日期按 vault 的 Asia/Shanghai 时间解释。
 
 `cover` 可以使用公开 HTTP(S) 图片 URL，或 `99-Meta/Attachments/` 下的图片路径 /
 wikilink。本地图片按内容哈希去重上传 Contentful
 Assets，导出为 URL；为了让草稿快照可以显示图片，Preview 也会发布这些图片 Assets，但不会发布目录 Entry。远程封面保留 URL，失效时网站回退
 `/assets/fallback.avif`。
 
-Base 查询决定条目顺序，网站保留同组条目的查询顺序；分类导航按名称排序。网站支持 Base 导出的分组和条目，不实现完整的 Bases 公式或布局引擎。修改 Base 的外观不会自动改变网站 CSS。
+Base 查询决定导出的条目，网站按创建时间从新到旧展示；分类导航按名称排序。网站支持 Base 导出的分组和条目，不实现完整的 Bases 公式或布局引擎。修改 Base 的外观不会自动改变网站 CSS。
 
 JSON 使用固定 `version: 1`，发布前校验 URL、身份、目录边界、字段及 Contentful 请求体大小（预留余量限制为 900,000
 bytes）。URL 规范化去重会报告被省略项；重复 ID、分组 slug 冲突、缺失字段、源文件在同步期间变化会中止。版本冲突不强行覆盖，重跑可重试；无变化的快照跳过远端更新。没有逐条笔记的 Contentful 同步字段。
@@ -49,3 +49,7 @@ CLI 必须已启用，桌面应用正在运行；本机执行 `/usr/local/bin/ob
 Publish 快照 → 部署网站代码。当前运行的网站在部署前仍读取 Raindrop。投稿表单仍写入 Airtable。
 
 实现依据：[Obsidian CLI](https://help.obsidian.md/cli)、[Bases](https://help.obsidian.md/bases)、[Contentful 技术限制](https://www.contentful.com/developers/docs/platform/technical-limits/)。
+
+网站按 `bookmark_group` 单选分组、`tags`
+多选交集筛选。单一搜索框：普通文字搜索标题、描述和域名，输入 `#` 从下拉建议选择标签，支持连续添加和删除标签；筛选完整快照后分页。标签保留完整名称，`course` 和 `resource/course`
+不合并。URL 保存 `q`、重复 `tag` 参数。Kind 已停用，新快照不再导出该字段，旧快照中的 kind 被忽略。

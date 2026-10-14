@@ -3,11 +3,11 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { BookmarkList } from '@/components/bookmark-list'
+import { BookmarkTitle } from '@/components/bookmark-title'
 import { FloatingHeader } from '@/components/floating-header'
-import { PageTitle } from '@/components/page-title'
 import { ScreenLoadingSpinner } from '@/components/screen-loading-spinner'
 import { ScrollArea } from '@/components/scroll-area'
-import { getBookmarkItems, getBookmarks } from '@/lib/bookmarks'
+import { getBookmarkCatalog, getBookmarks } from '@/lib/bookmarks'
 import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
@@ -17,19 +17,19 @@ async function fetchData(slug) {
   if (!currentBookmark) notFound()
 
   const sortedBookmarks = sortByProperty(bookmarks, 'title')
-  const bookmarkItems = await getBookmarkItems(currentBookmark._id, 0, (await draftMode()).isEnabled)
+  const catalog = await getBookmarkCatalog((await draftMode()).isEnabled)
 
   return {
     bookmarks: sortedBookmarks,
     currentBookmark,
-    bookmarkItems
+    catalog
   }
 }
 
 async function CollectionPage(props) {
   const params = await props.params
   const { slug } = params
-  const { bookmarks, currentBookmark, bookmarkItems } = await fetchData(slug)
+  const { bookmarks, currentBookmark, catalog } = await fetchData(slug)
 
   return (
     <ScrollArea className="bg-grid" useScrollAreaId>
@@ -41,9 +41,9 @@ async function CollectionPage(props) {
       />
       <div className="content-wrapper">
         <div className="content @container">
-          <PageTitle title={currentBookmark.title} />
+          <BookmarkTitle title={currentBookmark.title} groups={catalog.groups} id={currentBookmark._id} />
           <Suspense fallback={<ScreenLoadingSpinner />}>
-            <BookmarkList key={currentBookmark._id} id={currentBookmark._id} initialData={bookmarkItems} />
+            <BookmarkList key={currentBookmark._id} id={currentBookmark._id} catalog={catalog} />
           </Suspense>
         </div>
       </div>

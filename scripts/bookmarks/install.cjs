@@ -74,7 +74,7 @@ function install(vaultPath, apply = false) {
         ]
       },
       groupBy: { property: 'bookmark_group', direction: 'ASC' },
-      order: ['file.name', 'description', 'bookmark_group', 'bookmark_kind', 'source', 'cover', 'created'],
+      order: ['file.name', 'description', 'bookmark_group', 'tags', 'source', 'cover', 'created'],
       sort: [
         { property: 'created', direction: 'DESC' },
         { property: 'id', direction: 'DESC' }

@@ -43,8 +43,16 @@ export function normalizeCatalog(snapshot) {
       excerpt: string(item.description),
       cover: safeUrl(item.cover),
       collectionId: item.groupId,
-      kind: string(item.kind),
-      tags: Array.isArray(item.tags) ? item.tags.filter((t) => typeof t === 'string') : [],
+      tags: Array.isArray(item.tags)
+        ? [
+            ...new Set(
+              item.tags
+                .filter((t) => typeof t === 'string')
+                .map((t) => t.trim())
+                .filter(Boolean)
+            )
+          ]
+        : [],
       created: item.created,
       lastUpdate: item.created
     }

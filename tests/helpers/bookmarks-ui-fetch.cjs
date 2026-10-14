@@ -14,8 +14,12 @@ const snapshot = {
     description: 'A carefully selected resource for building useful software. 精选资源，记录用途与内容摘要。',
     cover: 'https://bookmarks.test/cover.svg',
     created: '2026-10-13T00:00:00.000Z',
-    kind: 'tool',
-    tags: ['resource']
+    tags:
+      index === 60
+        ? ['resource', 'tool', 'rare', 'resource/course']
+        : index === 61
+          ? ['tool', 'rare']
+          : ['resource', index % 2 ? 'article' : 'tool']
   }))
 }
 globalThis.fetch = async (input, options) => {

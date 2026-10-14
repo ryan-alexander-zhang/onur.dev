@@ -94,7 +94,6 @@ function parseBookmark(file, raw, parseYaml) {
     domain: url.hostname,
     description,
     group,
-    kind: str(fm.bookmark_kind),
     tags: [...new Set((Array.isArray(fm.tags) ? fm.tags : fm.tags ? [fm.tags] : []).map(str).filter(Boolean))],
     cover: str(fm.cover),
     created: dateISO(fm.created)
