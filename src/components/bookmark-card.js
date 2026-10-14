@@ -1,16 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { LuLink2 as Link2Icon } from 'react-icons/lu'
+
+import { BookmarkCover } from '@/components/bookmark-cover'
 
 export const BookmarkCard = ({ bookmark, order, selectedTags = [], onTag, groupTitle }) => {
   const [expanded, setExpanded] = useState(false)
-  const coverRef = useRef(null)
-  useEffect(() => {
-    const image = coverRef.current
-    // A remote image can fail before React hydrates its error handler.
-    if (image?.complete && !image.naturalWidth) image.src = '/assets/fallback.avif'
-  }, [bookmark.cover])
   const tags = [...bookmark.tags].sort((a, b) => Number(selectedTags.includes(b)) - Number(selectedTags.includes(a)))
   return (
     <article
@@ -23,21 +19,13 @@ export const BookmarkCard = ({ bookmark, order, selectedTags = [], onTag, groupT
         target="_blank"
         rel="noopener noreferrer"
       >
-        <span className="aspect-1200/630 overflow-hidden rounded-lg">
-          <img
-            ref={coverRef}
-            src={bookmark.cover || '/assets/fallback.avif'}
-            alt={bookmark.title}
-            width={1200}
-            height={630}
-            loading={order < 2 ? 'eager' : 'lazy'}
-            className="aspect-1200/630 w-full rounded-lg border object-cover"
-            onError={(e) => {
-              if (!e.currentTarget.src.endsWith('/assets/fallback.avif')) e.currentTarget.src = '/assets/fallback.avif'
-            }}
-            nopin="nopin"
-          />
-        </span>
+        <BookmarkCover
+          key={bookmark.cover}
+          cover={bookmark.cover}
+          domain={bookmark.domain}
+          title={bookmark.title}
+          order={order}
+        />
         <div className="flex min-w-0 flex-col gap-1">
           {groupTitle && <span className="text-xs text-gray-500">{groupTitle}</span>}
           <h2 className="line-clamp-4 text-lg leading-snug break-words group-hover:underline">{bookmark.title}</h2>

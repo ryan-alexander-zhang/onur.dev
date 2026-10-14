@@ -12,7 +12,14 @@ const snapshot = {
     title: `Bookmark ${index + 1}`,
     url: `https://bookmarks.test/${index + 1}`,
     description: 'A carefully selected resource for building useful software. 精选资源，记录用途与内容摘要。',
-    cover: 'https://bookmarks.test/cover.svg',
+    cover:
+      index === 1
+        ? ''
+        : index === 2
+          ? 'https://images.ctfassets.net/fixture/placeholder/fallback.avif'
+          : index === 3
+            ? 'https://bookmarks.test/broken.png'
+            : 'https://bookmarks.test/cover.svg',
     created: '2026-10-13T00:00:00.000Z',
     tags:
       index === 60

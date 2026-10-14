@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test')
 const cards = (page) => page.locator('article[data-bookmark-order]:visible')
 test.beforeEach(async ({ page }) => {
   await page.route('https://unpkg.com/**', (route) => route.abort())
+  await page.route('https://bookmarks.test/broken.png', (route) => route.fulfill({ status: 404, body: '' }))
   await page.route('https://bookmarks.test/cover.svg', (route) =>
     route.fulfill({
       contentType: 'image/svg+xml',
@@ -119,4 +120,23 @@ test('hashtag completion preserves content search, namespaces, keyboard and comp
   await expect(page).not.toHaveURL(/tag=rare/)
   await input.press('Enter')
   await expect(page).toHaveURL(/tag=rare/)
+})
+
+test('missing, legacy and failed covers render without placeholder image requests', async ({ page }, info) => {
+  const placeholderRequests = []
+  page.on('request', (request) => {
+    if (request.url().includes('fallback.avif')) placeholderRequests.push(request.url())
+  })
+  await page.goto('/bookmarks/ai')
+  for (const number of [2, 3, 4]) {
+    const card = cards(page).filter({ has: page.getByRole('heading', { name: `Bookmark ${number}`, exact: true }) })
+    await expect(card.locator('img')).toHaveCount(0)
+    await expect(card.locator('[data-bookmark-fallback]')).toBeVisible()
+    const bounds = await card.locator('[data-bookmark-fallback]').boundingBox()
+    expect(Math.abs(bounds.width / bounds.height - 1200 / 630)).toBeLessThan(0.03)
+  }
+  const normal = cards(page).filter({ has: page.getByRole('heading', { name: 'Bookmark 1', exact: true }) })
+  await expect(normal.locator('img')).toHaveCSS('opacity', '1')
+  expect(placeholderRequests).toEqual([])
+  await page.screenshot({ path: info.outputPath('generated-covers.png'), animations: 'disabled', scale: 'css' })
 })
