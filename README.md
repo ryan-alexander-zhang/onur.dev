@@ -18,8 +18,8 @@ my GitHub profile and profile `README`, so updating GitHub is enough to refresh 
 - `/cards` — Permanent-note boxes by tag, with random draws and outgoing-link exploration.
 - `/cards/[noteId]` — Permanent note in Chinese or English, with related cards by link distance.
 - `/journey` — Journey page.
-- `/bookmarks` — Bookmarks page.
-- `/bookmarks/[slug]` — Static pre-rendered bookmarks pages using [Raindrop](https://raindrop.io/).
+- `/bookmarks` — All bookmarks, with content search and `#tag` filtering.
+- `/bookmarks/[slug]` — Bookmark groups from an Obsidian Base catalog published to Contentful.
 - `/bookmarks.xml` — Bookmarks XML feed.
 - `/api` — API routes.
 
@@ -67,9 +67,24 @@ focused, arrow keys pan, `+`/`-` zoom, `F` or `0` fits, and `C` focuses. Card li
 URLs; the tag/view query and browser Back preserve workspace context. Carousel movement, flips, and the map respect the
 system's reduced-motion preference.
 
-See [the Obsidian publishing guide](./scripts/obsidian/README.md) for model setup, QuickAdd installation, and
-publishing. After publishing, the `permanentNote` revalidation webhook refreshes the cards collection, every
+Publish permanent notes through the vault's QuickAdd commands described below. After publishing, the
+`permanentNote` revalidation webhook refreshes the cards collection, every
 detail/graph view, and sitemap.
+
+## Content Publishing
+
+Publishing scripts and their documentation are maintained directly in the `zettelkasten` Obsidian vault under
+`99-Meta/Scripts/`. Use the installed QuickAdd commands to check, preview, and publish writing, pages, journal
+entries, permanent notes, and bookmarks. The vault scripts run independently of this website repository.
+
+For bookmarks, `Bookmarks Check Base`, `Bookmarks Preview Base`, and `Bookmarks Publish Base` use the `网站` view
+in `Bookmarks.base`. The complete catalog is stored in one Contentful entry, `bookmarkCatalog_main`. The website
+uses `bookmark_group` for groups and `tags` for tag filtering; `bookmark_kind` is no longer used.
+
+This repository maintains the website's Contentful readers, rendering, cache revalidation, and website tests.
+Change publishing behavior in the vault scripts; their former source files and generators remain available in Git
+history. The remaining `scripts/setup-contentful-model.sh` and `scripts/generate-env-example.sh` are optional
+repository setup utilities, not dependencies of the installed QuickAdd commands.
 
 ## Tech Stack
 
@@ -77,7 +92,6 @@ detail/graph view, and sitemap.
 - [Tailwind CSS](https://tailwindcss.com)
 - [shadcn/ui](https://ui.shadcn.com)
 - [Contentful](https://www.contentful.com)
-- [Raindrop](https://raindrop.io)
 - [Supabase](https://supabase.com)
 - [Tinybird](https://tinybird.co)
 - [Vercel](https://vercel.com)

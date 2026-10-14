@@ -1,9 +1,0 @@
-{
-  "name": "Bookmark Catalog",
-  "description": "One complete published snapshot of the Obsidian Bookmarks Base.",
-  "displayField": "title",
-  "fields": [
-    { "id": "title", "name": "Title", "type": "Symbol", "required": true },
-    { "id": "snapshot", "name": "Base snapshot", "type": "Object", "required": true }
-  ]
-}
