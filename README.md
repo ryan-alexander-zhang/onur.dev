@@ -81,6 +81,34 @@ For bookmarks, `Bookmarks Check Base`, `Bookmarks Preview Base`, and `Bookmarks 
 in `Bookmarks.base`. The complete catalog is stored in one Contentful entry, `bookmarkCatalog_main`. The website
 uses `bookmark_group` for groups and `tags` for tag filtering; `bookmark_kind` is no longer used.
 
+Bookmark search filters text immediately; press **Enter** (or the arrow in the input) for AI matching.
+When composing `#tag`, Enter selects the tag instead. Group and all selected tags restrict AI candidates;
+editing the query or filters returns to text search. AI results are ranked by relevance and may be empty.
+Timeouts and errors preserve local text search. Draft previews use text search only.
+
+Set `JEV_KEY` in the ignored root `.env.local` for local development, or in Vercel's server environment
+settings for deployment, then restart/redeploy. An exported shell variable also works if Next.js inherits it.
+Never prefix this key with `NEXT_PUBLIC_`, add it to `next.config`'s `env`, or commit it. Only the server-only
+search module reads it; browsers call `/api/bookmarks/search` with query/group/tags and receive ranked IDs.
+The server reads the published Contentful catalog and sends only title, description, group and tags to
+`https://api.typesafe.ai`; it does not accept client-supplied documents or send draft notes, covers or URLs.
+
+Search pins `jev-1.13.0`, uses a provisional 0.7 matching threshold, batches up to 48 candidates with 4 workers,
+and aborts upstream work after 8 seconds. Successful results (including empty results) are cached for 15 minutes
+using the candidate content, query, filters, prompt and model versions. Limits are 10 requests per IP per minute,
+30 uncached searches per minute and 3 concurrent searches **per server instance**, with a 1,000-candidate ceiling.
+These in-memory limits and caches reset on restart and are not shared across serverless instances. Configure
+Vercel Firewall rate limits and provider spending limits for a deployment-wide budget; hiding the key alone
+does not prevent visitors from consuming search quota through the public endpoint.
+
+The server needs outbound access to Jev. A local HTTP 451 response was observed on a direct connection;
+the same request succeeded through the developer's existing proxy. A terminal's proxy configuration does
+not necessarily apply to Node's `fetch`. Verify the Node/server network path when testing locally and the
+deployment region when hosting; no developer-specific proxy address is embedded in the website.
+
+Run search unit tests with `node --conditions=react-server --test tests/bookmark-semantic-search.test.mjs`
+and browser checks with `npx playwright test --config tests/bookmarks-ui.config.cjs`.
+
 This repository maintains the website's Contentful readers, rendering, cache revalidation, and website tests.
 Change publishing behavior in the vault scripts; their former source files and generators remain available in Git
 history. The remaining `scripts/setup-contentful-model.sh` and `scripts/generate-env-example.sh` are optional

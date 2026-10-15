@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
-import { LuHash, LuSearch, LuX } from 'react-icons/lu'
+import { LuArrowUp, LuHash, LuLoaderCircle, LuSearch, LuX } from 'react-icons/lu'
 
 // A trailing #token is a tag being composed, never a content search term.
 function splitInput(text) {
@@ -9,7 +9,18 @@ function splitInput(text) {
   return match ? { query: text.slice(0, match.index).trimEnd(), tag: match[1] } : { query: text, tag: null }
 }
 
-export function BookmarkSearch({ query, tags, options, onChange, count }) {
+export function BookmarkSearch({
+  query,
+  tags,
+  options,
+  onChange,
+  count,
+  semanticEnabled,
+  semanticStatus,
+  semanticMessage,
+  onSemanticSearch,
+  onTextSearch
+}) {
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const listId = useId()
@@ -108,6 +119,8 @@ export function BookmarkSearch({ query, tags, options, onChange, count }) {
             aria-activedescendant={open && candidates.length ? `${listId}-${index}` : undefined}
             autoComplete="off"
             spellCheck={false}
+            maxLength={500}
+            enterKeyHint="search"
             placeholder={tags.length ? 'Search or add #tag…' : 'Search bookmarks or type # for tags…'}
             value={text}
             onChange={(event) => handleInput(event.target.value, event.nativeEvent.isComposing)}
@@ -126,6 +139,9 @@ export function BookmarkSearch({ query, tags, options, onChange, count }) {
               } else if (open && candidates[index] && (event.key === 'Enter' || event.key === 'Tab')) {
                 event.preventDefault()
                 selectTag(candidates[index].tag)
+              } else if (event.key === 'Enter' && token.tag === null) {
+                event.preventDefault()
+                onSemanticSearch?.()
               } else if (event.key === 'Backspace' && !text && tags.length) {
                 event.preventDefault()
                 removeTag(tags.at(-1))
@@ -134,7 +150,45 @@ export function BookmarkSearch({ query, tags, options, onChange, count }) {
             className="h-7 min-w-24 flex-1 basis-36 bg-transparent text-base outline-none placeholder:text-gray-400 sm:text-sm"
           />
         </div>
+        {semanticEnabled && query.trim().length >= 2 && token.tag === null && (
+          <button
+            type="button"
+            aria-label="Search with AI"
+            title="Search with AI (Enter)"
+            onClick={onSemanticSearch}
+            disabled={semanticStatus === 'loading'}
+            className="flex size-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-900 disabled:cursor-wait"
+          >
+            {semanticStatus === 'loading' ? (
+              <LuLoaderCircle size={15} className="animate-spin motion-reduce:animate-none" />
+            ) : (
+              <LuArrowUp size={15} />
+            )}
+          </button>
+        )}
       </div>
+      {semanticEnabled && (
+        <div className="mt-2 flex min-h-4 items-start justify-between gap-2 text-xs text-gray-500">
+          <span role="status" aria-live="polite">
+            {semanticStatus === 'loading'
+              ? 'Finding matching bookmarks…'
+              : semanticStatus === 'success'
+                ? `${count} AI ${count === 1 ? 'match' : 'matches'}`
+                : semanticStatus === 'error'
+                  ? semanticMessage
+                  : 'Enter for AI search · # for tags'}
+          </span>
+          {semanticStatus === 'success' && (
+            <button
+              type="button"
+              className="shrink-0 underline underline-offset-2 hover:text-gray-900"
+              onClick={onTextSearch}
+            >
+              Use text search
+            </button>
+          )}
+        </div>
+      )}
       <span className="sr-only" role="status" aria-live="polite">
         {count} bookmarks
       </span>

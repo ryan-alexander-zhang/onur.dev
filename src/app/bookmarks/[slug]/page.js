@@ -12,24 +12,26 @@ import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
 async function fetchData(slug) {
-  const bookmarks = await getBookmarks((await draftMode()).isEnabled)
+  const preview = (await draftMode()).isEnabled
+  const bookmarks = await getBookmarks(preview)
   const currentBookmark = bookmarks.find((bookmark) => bookmark.slug === slug)
   if (!currentBookmark) notFound()
 
   const sortedBookmarks = sortByProperty(bookmarks, 'title')
-  const catalog = await getBookmarkCatalog((await draftMode()).isEnabled)
+  const catalog = await getBookmarkCatalog(preview)
 
   return {
     bookmarks: sortedBookmarks,
     currentBookmark,
-    catalog
+    catalog,
+    semanticEnabled: !preview && Boolean(process.env.JEV_KEY)
   }
 }
 
 async function CollectionPage(props) {
   const params = await props.params
   const { slug } = params
-  const { bookmarks, currentBookmark, catalog } = await fetchData(slug)
+  const { bookmarks, currentBookmark, catalog, semanticEnabled } = await fetchData(slug)
 
   return (
     <ScrollArea className="bg-grid" useScrollAreaId>
@@ -43,7 +45,12 @@ async function CollectionPage(props) {
         <div className="content @container">
           <BookmarkTitle title={currentBookmark.title} groups={catalog.groups} id={currentBookmark._id} />
           <Suspense fallback={<ScreenLoadingSpinner />}>
-            <BookmarkList key={currentBookmark._id} id={currentBookmark._id} catalog={catalog} />
+            <BookmarkList
+              key={currentBookmark._id}
+              id={currentBookmark._id}
+              catalog={catalog}
+              semanticEnabled={semanticEnabled}
+            />
           </Suspense>
         </div>
       </div>

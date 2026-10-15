@@ -12,7 +12,8 @@ import { buildAbsoluteUrl, getSiteMetadata } from '@/lib/site'
 import { sortByProperty } from '@/lib/utils'
 
 async function BookmarksIndex() {
-  const catalog = await getBookmarkCatalog((await draftMode()).isEnabled)
+  const preview = (await draftMode()).isEnabled
+  const catalog = await getBookmarkCatalog(preview)
   const bookmarks = sortByProperty(catalog.groups, 'title')
   return (
     <ScrollArea className="bg-grid" useScrollAreaId>
@@ -20,7 +21,7 @@ async function BookmarksIndex() {
       <div className="content-wrapper">
         <div className="content @container">
           <BookmarkTitle title="All bookmarks" groups={catalog.groups} />
-          <BookmarkList catalog={catalog} />
+          <BookmarkList catalog={catalog} semanticEnabled={!preview && Boolean(process.env.JEV_KEY)} />
         </div>
       </div>
     </ScrollArea>

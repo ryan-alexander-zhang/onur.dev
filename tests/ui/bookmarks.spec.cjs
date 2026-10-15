@@ -140,3 +140,81 @@ test('missing, legacy and failed covers render without placeholder image request
   expect(placeholderRequests).toEqual([])
   await page.screenshot({ path: info.outputPath('generated-covers.png'), animations: 'disabled', scale: 'css' })
 })
+
+test('AI search uses server results, preserves tags and returns to local search on edits', async ({ page }) => {
+  const upstream = []
+  page.on('request', (request) => {
+    if (request.url().includes('api.typesafe.ai')) upstream.push(request.url())
+  })
+  await page.goto('/bookmarks/ai?tag=tool&tag=rare')
+  const input = page.getByRole('combobox', { name: 'Search bookmarks' })
+  await input.fill('帮我找一个有用的编程资源')
+  await expect(cards(page)).toHaveCount(0)
+  const responsePromise = page.waitForResponse('/api/bookmarks/search')
+  await input.press('Enter')
+  const response = await responsePromise
+  expect(response.ok()).toBeTruthy()
+  expect(response.request().postDataJSON()).toEqual({
+    query: '帮我找一个有用的编程资源',
+    group: 'ai',
+    tags: ['tool', 'rare']
+  })
+  expect(await response.json()).toEqual({ ids: ['20261013000060'] })
+  await expect(page.getByText('1 AI match', { exact: true })).toBeVisible()
+  await expect(cards(page)).toHaveCount(1)
+  await expect(cards(page).first()).toContainText('Bookmark 61')
+  await page.getByRole('button', { name: 'Use text search' }).click()
+  await expect(cards(page)).toHaveCount(0)
+  await page.getByRole('button', { name: 'Search with AI' }).click()
+  await expect(cards(page)).toHaveCount(1)
+  await input.fill('no matching resource')
+  await expect(page.getByText('1 AI match', { exact: true })).toHaveCount(0)
+  await input.press('Enter')
+  await expect(page.getByText('No close matches found.', { exact: true })).toBeVisible()
+  expect(upstream).toEqual([])
+  expect(await page.content()).not.toContain('fixture-server-only-jev-secret')
+})
+
+test('typing and tag selection do not call AI; failures preserve local results and retry', async ({ page }) => {
+  let calls = 0
+  await page.route('**/api/bookmarks/search', (route) => {
+    calls++
+    return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ error: 'Limited' }) })
+  })
+  await page.goto('/bookmarks/ai')
+  const input = page.getByRole('combobox', { name: 'Search bookmarks' })
+  await input.fill('Bookmark 61 #tool')
+  await input.press('Enter')
+  await expect(page.getByRole('button', { name: 'Remove tool', exact: true })).toBeAttached()
+  expect(calls).toBe(0)
+  await input.dispatchEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: true })
+  expect(calls).toBe(0)
+  await input.press('Enter')
+  await expect(page.getByText('Too many AI searches. Try again in a minute. Showing text matches.')).toBeVisible()
+  await expect(cards(page)).toHaveCount(1)
+  await input.press('Enter')
+  await expect.poll(() => calls).toBe(2)
+})
+
+test('editing while AI is pending discards the old response and recovers cleanly', async ({ page }) => {
+  let release
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/bookmarks/search', async (route) => {
+    await gate
+    await route
+      .fulfill({ contentType: 'application/json', body: JSON.stringify({ ids: ['20261013000060'] }) })
+      .catch(() => {})
+  })
+  await page.goto('/bookmarks/ai')
+  const input = page.getByRole('combobox', { name: 'Search bookmarks' })
+  await input.fill('Find coding resources')
+  await input.press('Enter')
+  await expect(page.getByText('Finding matching bookmarks…')).toBeVisible()
+  await input.fill('Bookmark 2')
+  release()
+  await expect(page.getByText('Finding matching bookmarks…')).toHaveCount(0)
+  await expect(cards(page)).toHaveCount(15)
+  await expect(cards(page).filter({ hasText: 'Bookmark 61' })).toHaveCount(0)
+})

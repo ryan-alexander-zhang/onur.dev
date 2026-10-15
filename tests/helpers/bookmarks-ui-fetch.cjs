@@ -30,6 +30,27 @@ const snapshot = {
   }))
 }
 globalThis.fetch = async (input, options) => {
+  if (String(input?.url || input) === 'https://api.typesafe.ai/v1/systemone') {
+    const body = JSON.parse(options.body)
+    if (options.headers.Authorization !== 'Bearer fixture-server-only-jev-secret')
+      throw new Error('Unexpected test key')
+    return Response.json({
+      model: body.model,
+      answers: Object.fromEntries(
+        Object.entries(body.questions).map(([id, q]) => [
+          id,
+          {
+            type: 'noul',
+            noul: body.state.query.includes('no matching resource')
+              ? 0.1
+              : q.instructions.candidate.title === 'Bookmark 61'
+                ? 0.96
+                : 0.1
+          }
+        ])
+      )
+    })
+  }
   if (String(input?.url || input).startsWith('https://graphql.contentful.com/')) {
     const body = JSON.parse(options?.body || (input?.clone ? await input.clone().text() : '{}'))
     if (body.query?.includes('query BookmarkCatalog')) {

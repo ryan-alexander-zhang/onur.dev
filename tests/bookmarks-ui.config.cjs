@@ -22,7 +22,8 @@ module.exports = defineConfig({
       CONTENTFUL_ACCESS_TOKEN: 'fixture',
       CONTENTFUL_PREVIEW_ACCESS_TOKEN: 'fixture-preview',
       CONTENTFUL_PREVIEW_SECRET: 'fixture-preview',
-      NEXT_REVALIDATE_SECRET: 'fixture-revalidate'
+      NEXT_REVALIDATE_SECRET: 'fixture-revalidate',
+      JEV_KEY: 'fixture-server-only-jev-secret'
     }
   }
 })
