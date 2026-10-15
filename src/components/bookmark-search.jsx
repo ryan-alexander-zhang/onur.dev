@@ -22,14 +22,17 @@ export function BookmarkSearch({
   onTextSearch
 }) {
   const inputRef = useRef(null)
+  const composingRef = useRef(false)
+  const compositionEndRef = useRef(-Infinity)
   const listRef = useRef(null)
   const listId = useId()
   const [draft, setDraft] = useState(null)
+  const [compositionText, setCompositionText] = useState(null)
   const [focused, setFocused] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [active, setActive] = useState(0)
   const signature = JSON.stringify([query, tags])
-  const text = draft?.signature === signature ? draft.text : query
+  const text = compositionText ?? (draft?.signature === signature ? draft.text : query)
   const token = splitInput(text)
   const candidates =
     token.tag === null
@@ -40,7 +43,7 @@ export function BookmarkSearch({
               count > 0 && !tags.includes(tag) && tag.toLocaleLowerCase().includes(token.tag.toLocaleLowerCase())
           )
           .slice(0, 30)
-  const open = focused && !dismissed && token.tag !== null
+  const open = focused && !dismissed && compositionText === null && token.tag !== null
   const index = Math.min(active, Math.max(0, candidates.length - 1))
 
   useEffect(() => {
@@ -63,6 +66,12 @@ export function BookmarkSearch({
     inputRef.current?.focus()
   }
   const handleInput = (value, composing) => {
+    // Keep the IME's provisional text local. URL/result updates can rewrite the
+    // controlled value while the browser is still composing a character.
+    if (composingRef.current || composing) {
+      setCompositionText(value)
+      return
+    }
     const next = splitInput(value)
     setDraft({ signature: JSON.stringify([next.query, tags]), text: value })
     onChange({ query: next.query }, true)
@@ -124,12 +133,24 @@ export function BookmarkSearch({
             placeholder={tags.length ? 'Search or add #tag…' : 'Search bookmarks or type # for tags…'}
             value={text}
             onChange={(event) => handleInput(event.target.value, event.nativeEvent.isComposing)}
+            onCompositionStart={(event) => {
+              composingRef.current = true
+              setCompositionText(event.currentTarget.value)
+            }}
+            onCompositionEnd={(event) => {
+              composingRef.current = false
+              compositionEndRef.current = event.timeStamp
+              setCompositionText(null)
+              handleInput(event.currentTarget.value, false)
+            }}
             onFocus={() => {
               setFocused(true)
               setDismissed(false)
             }}
             onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing || event.keyCode === 229) return
+              if (composingRef.current || event.nativeEvent.isComposing || event.keyCode === 229) return
+              // Some browsers end composition before dispatching its confirming Enter.
+              if (event.key === 'Enter' && event.timeStamp - compositionEndRef.current < 50) return
               if (event.key === 'Escape') {
                 setDismissed(true)
                 event.preventDefault()

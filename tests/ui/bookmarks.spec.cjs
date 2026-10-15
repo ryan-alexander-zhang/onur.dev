@@ -218,3 +218,45 @@ test('editing while AI is pending discards the old response and recovers cleanly
   await expect(cards(page)).toHaveCount(15)
   await expect(cards(page).filter({ hasText: 'Bookmark 61' })).toHaveCount(0)
 })
+
+test('IME composition keeps the input stable and only commits the completed Chinese query', async ({ page }) => {
+  let searches = 0
+  await page.route('**/api/bookmarks/search', (route) => {
+    searches++
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ids: [] }) })
+  })
+  await page.goto('/bookmarks/ai')
+  const input = page.getByRole('combobox', { name: 'Search bookmarks' })
+  await input.focus()
+  await input.dispatchEvent('compositionstart', { data: '' })
+  for (const value of ['z', 'zhong', '中文']) {
+    // Use the native setter so React sees real input changes, not only a synthetic keydown.
+    await input.evaluate((element, value) => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(element, value)
+      element.dispatchEvent(
+        new InputEvent('input', { bubbles: true, data: value, inputType: 'insertCompositionText', isComposing: true })
+      )
+    }, value)
+    await expect(input).toHaveValue(value)
+    await expect(input).toBeFocused()
+    expect(new URL(page.url()).searchParams.has('q')).toBe(false)
+    await expect(cards(page)).toHaveCount(50)
+  }
+  // Some IMEs report a plain Enter before ending composition.
+  await input.dispatchEvent('keydown', { key: 'Enter', code: 'Enter', isComposing: false })
+  expect(searches).toBe(0)
+  // Safari can also emit compositionend before the Enter that accepted the candidate.
+  await input.evaluate((element) => {
+    element.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '中文' }))
+    element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', code: 'Enter' }))
+  })
+  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('中文')
+  await expect(input).toHaveValue('中文')
+  await expect(cards(page)).toHaveCount(0)
+  expect(searches).toBe(0)
+  // A later, deliberate Enter still submits the completed text.
+  await page.waitForTimeout(60)
+  await input.press('Enter')
+  await expect.poll(() => searches).toBe(1)
+  await expect(page.getByText('0 AI matches', { exact: true })).toBeVisible()
+})
