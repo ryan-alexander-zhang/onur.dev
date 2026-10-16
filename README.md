@@ -94,8 +94,19 @@ The server reads the published Contentful catalog and sends only title, descript
 `https://api.typesafe.ai`; it does not accept client-supplied documents or send draft notes, covers or URLs.
 
 Search pins `jev-1.13.0`, uses a provisional 0.7 matching threshold, batches up to 48 candidates with 4 workers,
-and aborts upstream work after 8 seconds. Successful results (including empty results) are cached for 15 minutes
-using the candidate content, query, filters, prompt and model versions. Limits are 10 requests per IP per minute,
+and aborts upstream work after 8 seconds. Candidates are sorted by stable bookmark ID, which also identifies
+each Jev question. Metadata tags are deduplicated and sorted before truncation; equal scores use bookmark ID
+as a deterministic tie-breaker. Ordinary text search retains its existing ordering.
+
+An in-memory LRU stores up to 50,000 raw candidate scores for 15 minutes, including zero and below-threshold
+scores. Each key includes the trimmed query, bookmark ID, sent metadata, model and prompt content/version.
+Group/tag filters restrict the current candidate pool but do not invalidate otherwise reusable scores.
+Reordering candidates or tags causes no reevaluation; adding/editing a bookmark evaluates only new/changed
+metadata, and deleted bookmarks are excluded immediately from the current catalog's results. Overlapping
+concurrent searches share pending candidate assessments. Failed or incomplete evaluation jobs are not cached.
+No shared database or external cache is used.
+
+Limits are 10 requests per IP per minute,
 30 uncached searches per minute and 3 concurrent searches **per server instance**, with a 1,000-candidate ceiling.
 These in-memory limits and caches reset on restart and are not shared across serverless instances. Configure
 Vercel Firewall rate limits and provider spending limits for a deployment-wide budget; hiding the key alone

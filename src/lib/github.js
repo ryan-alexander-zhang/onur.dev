@@ -1,6 +1,8 @@
 import 'server-only'
 
-import { cacheLife } from 'next/cache'
+// Cache the HTTP responses with fetch's revalidate option below. These helpers
+// also run inside page/metadata caches; another "use cache" boundary here can
+// leave a nested cache fill unfinished when a cold prerender is aborted.
 
 const PROFILE_OWNER = 'ryan-alexander-zhang'
 const PROFILE_REPOSITORY = 'ryan-alexander-zhang/ryan-alexander-zhang'
@@ -107,9 +109,6 @@ function extractIntroSection(markdown) {
 }
 
 export async function getGithubProfile() {
-  'use cache'
-  cacheLife('hours')
-
   try {
     const profile = await fetchGithubProfile()
     const profileUrl = profile?.html_url || FALLBACK_GITHUB_PROFILE.profileUrl
@@ -132,9 +131,6 @@ export async function getGithubProfile() {
 }
 
 export async function getHomeProfileReadme() {
-  'use cache'
-  cacheLife('hours')
-
   try {
     const response = await fetch(README_URL, {
       headers: getGithubHeaders('text/plain; charset=utf-8'),

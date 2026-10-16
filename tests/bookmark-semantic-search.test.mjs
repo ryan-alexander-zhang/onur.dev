@@ -43,7 +43,7 @@ test('filters scope before AI, sends only metadata, validates ranking and keeps 
         assert.equal(instructions.candidate.group, 'AI')
         assert.ok(instructions.candidate.tags.includes('eval'))
       }
-      return valid(body, (id) => (Number(id) === 0 ? 0.8 : Number(id) === 1 ? 0.95 : 0.2))
+      return valid(body, (id) => (Number(id) === 0 ? 0.8 : Number(id) === 2 ? 0.95 : 0.2))
     }
   })
   assert.deepEqual(await search(catalog, input), { ids: ['2', '0'] })
@@ -51,7 +51,7 @@ test('filters scope before AI, sends only metadata, validates ranking and keeps 
   assert.deepEqual(await search(catalog, { ...input, group: 'missing' }), { ids: [] })
   assert.equal(calls, 2)
 })
-test('coalesces identical work and invalidates cache on metadata, query and scope changes', async () => {
+test('coalesces identical work and only reevaluates changed metadata or new query/scope candidates', async () => {
   let calls = 0
   const search = createBookmarkSemanticSearch({
     getKey: () => 'key',
@@ -68,11 +68,11 @@ test('coalesces identical work and invalidates cache on metadata, query and scop
   const edited = structuredClone(catalog)
   edited.items[0].excerpt = 'Changed'
   await search(edited, input)
-  assert.equal(calls, 4)
+  assert.equal(calls, 3)
   await search(catalog, { ...input, query: 'another query' })
-  assert.equal(calls, 6)
+  assert.equal(calls, 5)
   await search(catalog, { ...input, group: 'tools' })
-  assert.equal(calls, 7)
+  assert.equal(calls, 6)
 })
 test('empty matches are cached and low-scoring candidates are not padded into results', async () => {
   let calls = 0
@@ -229,4 +229,149 @@ test('instance budget blocks new work but permits cached results', async () => {
   await assert.rejects(search(one, { ...input, query: 'over budget' }), { status: 429 })
   assert.deepEqual(await search(one, { ...input, query: 'query 0' }), { ids: ['0'] })
   assert.equal(calls, 30)
+})
+
+test('source and tag ordering do not affect cache hits or cold request payloads', async () => {
+  const reordered = structuredClone(catalog)
+  reordered.items.reverse()
+  reordered.groups.reverse()
+  for (const item of reordered.items) {
+    item.tags = [...item.tags].reverse().concat(item.tags)
+    item.created = '2027-01-01'
+    item.cover = 'new-cover'
+  }
+  const requests = []
+  const fetcher = async (_, options) => {
+    requests.push(options.body)
+    const body = JSON.parse(options.body)
+    for (const [id, value] of Object.entries(body.questions)) {
+      assert.equal(value.instructions.candidate.title, `Resource ${id}`)
+      assert.deepEqual(value.instructions.candidate.tags, ['eval', 'tool'])
+    }
+    return valid(body)
+  }
+  const search = createBookmarkSemanticSearch({ getKey: () => 'key', fetcher })
+  const first = await search(catalog, input)
+  const expected = [...first.ids].sort()
+  assert.deepEqual(first.ids, expected)
+  assert.deepEqual(
+    await search(reordered, { ...input, query: `  ${input.query}  `, tags: ['tool', 'eval', 'tool'] }),
+    first
+  )
+  assert.equal(requests.length, 2)
+  const freshSearch = createBookmarkSemanticSearch({ getKey: () => 'key', fetcher })
+  assert.deepEqual(await freshSearch(reordered, input), first)
+  assert.deepEqual(requests.slice(2), requests.slice(0, 2))
+})
+
+test('adding, editing and deleting bookmarks only evaluates new or changed candidates', async () => {
+  const requestedIds = []
+  const search = createBookmarkSemanticSearch({
+    getKey: () => 'key',
+    fetcher: async (_, options) => {
+      const body = JSON.parse(options.body)
+      requestedIds.push(...Object.keys(body.questions))
+      return valid(body)
+    }
+  })
+  await search(catalog, input)
+  assert.equal(requestedIds.length, 50)
+  requestedIds.length = 0
+  const changed = structuredClone(catalog)
+  changed.items.push({ ...changed.items[0], _id: 'new', title: 'New candidate' })
+  changed.items[2].excerpt = 'Updated description'
+  changed.items = changed.items.filter((item) => item._id !== '0')
+  const result = await search(changed, input)
+  assert.deepEqual(requestedIds.sort(), ['2', 'new'])
+  assert.equal(result.ids.length, 50)
+  assert.ok(result.ids.includes('new'))
+  assert.ok(!result.ids.includes('0'))
+  requestedIds.length = 0
+  changed.items[2].tags = [...changed.items[2].tags, 'new-tag']
+  // This item is outside the selected eval tag and must never be evaluated.
+  await search(changed, input)
+  assert.deepEqual(requestedIds, [])
+})
+
+test('raw scores, including zero and below-threshold values, are reused across filters', async () => {
+  let candidatesSent = 0
+  const search = createBookmarkSemanticSearch({
+    getKey: () => 'key',
+    fetcher: async (_, options) => {
+      const body = JSON.parse(options.body)
+      candidatesSent += Object.keys(body.questions).length
+      return valid(body, (id) => (id === '0' ? 0 : id === '2' ? 0.52 : 0.91))
+    }
+  })
+  await search(catalog, { query: input.query })
+  assert.equal(candidatesSent, 101)
+  const result = await search(catalog, input)
+  assert.equal(candidatesSent, 101)
+  assert.equal(result.ids.length, 48)
+  assert.ok(!result.ids.includes('0') && !result.ids.includes('2') && !result.ids.includes('100'))
+})
+
+test('concurrent searches with overlapping scopes share in-flight candidate scores', async () => {
+  const releases = []
+  const sent = []
+  const search = createBookmarkSemanticSearch({
+    getKey: () => 'key',
+    fetcher: (_, options) => {
+      const body = JSON.parse(options.body)
+      sent.push(...Object.keys(body.questions))
+      return new Promise((resolve) => releases.push(() => resolve(valid(body))))
+    }
+  })
+  const narrow = search(catalog, input)
+  const broad = search(catalog, { ...input, tags: ['tool'] })
+  assert.equal(sent.length, 100)
+  assert.equal(new Set(sent).size, 100)
+  releases.splice(0).forEach((release) => release())
+  const [narrowResult, broadResult] = await Promise.all([narrow, broad])
+  assert.equal(narrowResult.ids.length, 50)
+  assert.equal(broadResult.ids.length, 100)
+  assert.ok(narrowResult.ids.every((id) => Number(id) % 2 === 0))
+})
+
+test('metadata tag changes invalidate only that bookmark, with normalization before truncation', async () => {
+  const one = { ...catalog, items: [{ ...catalog.items[0], tags: Array.from({ length: 50 }, (_, i) => `tag-${i}`) }] }
+  const sent = []
+  const search = createBookmarkSemanticSearch({
+    getKey: () => 'key',
+    fetcher: async (_, options) => {
+      const body = JSON.parse(options.body)
+      sent.push(body)
+      return valid(body)
+    }
+  })
+  await search(one, { query: input.query })
+  one.items[0].tags.reverse()
+  await search(one, { query: input.query })
+  assert.equal(sent.length, 1)
+  assert.equal(sent[0].questions['0'].instructions.candidate.tags.length, 40)
+  one.items[0].tags.push('a-new-tag')
+  await search(one, { query: input.query })
+  assert.equal(sent.length, 2)
+})
+
+test('score cache expiration and LRU eviction trigger reevaluation without losing in-flight results', async () => {
+  const two = { ...catalog, items: [catalog.items[0], catalog.items[2]] }
+  let calls = 0
+  const search = createBookmarkSemanticSearch({
+    getKey: () => 'key',
+    cacheMax: 1,
+    cacheTtlMs: 15,
+    fetcher: async (_, options) => {
+      calls++
+      return valid(JSON.parse(options.body))
+    }
+  })
+  assert.deepEqual(await search(two, input), { ids: ['0', '2'] })
+  await search({ ...two, items: [two.items[1]] }, input)
+  assert.equal(calls, 1)
+  await search({ ...two, items: [two.items[0]] }, input)
+  assert.equal(calls, 2)
+  await new Promise((resolve) => setTimeout(resolve, 25))
+  await search({ ...two, items: [two.items[0]] }, input)
+  assert.equal(calls, 3)
 })
